@@ -1,0 +1,41 @@
+# ── Build outputs ────────────────────────────────────────────────────
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+/app/build/
+/build/
+
+# ── Gradle ───────────────────────────────────────────────────────────
+.gradle/
+gradle-app.setting
+!gradle-wrapper.jar
+!gradle-wrapper.properties
+*.hprof
+
+# ── IDE / Android Studio ─────────────────────────────────────────────
+.idea/
+*.iml
+*.iws
+*.ipr
+.cxx/
+local.properties
+captures/
+
+# ── Kotlin / Java ────────────────────────────────────────────────────
+*.log
+hs_err_pid*
+
+# ── OS files ─────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*~
+
+# ── Signing ──────────────────────────────────────────────────────────
+*.jks
+*.keystore
+signing.properties
+
+# ── Debug APK copy ───────────────────────────────────────────────────
+neviim-debug.apk
