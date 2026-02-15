@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">נביאים</string>
+
+    <!-- Bottom Nav -->
+    <string name="nav_explore">גלה</string>
+    <string name="nav_my_bids">ההימורים שלי</string>
+    <string name="nav_account">החשבון שלי</string>
+
+    <!-- Explore Screen -->
+    <string name="search_events">חפש אירועים…</string>
+    <string name="all_filter">הכל</string>
+    <string name="yes_label">כן</string>
+    <string name="no_label">לא</string>
+    <string name="volume_label">נפח</string>
+    <string name="sp_currency">ש״פ</string>
+
+    <!-- Event Detail -->
+    <string name="probability_history">היסטוריית הסתברות</string>
+    <string name="trade">מסחר</string>
+    <string name="buy_yes">קנה כן</string>
+    <string name="buy_no">קנה לא</string>
+    <string name="amount_sp">סכום (ש״פ)</string>
+    <string name="estimated_return">תשואה משוערת</string>
+    <string name="place_trade">בצע עסקה</string>
+    <string name="enter_amount">הכנס סכום</string>
+    <string name="insufficient_balance">יתרה לא מספיקה!</string>
+    <string name="trade_successful">העסקה בוצעה בהצלחה!</string>
+    <string name="current_probability">הסתברות נוכחית</string>
+
+    <!-- Portfolio -->
+    <string name="active_positions">פעיל</string>
+    <string name="resolved_positions">הסתיים</string>
+    <string name="side">צד</string>
+    <string name="entry_price">כניסה</string>
+    <string name="current_price">נוכחי</string>
+    <string name="pnl">רווח/הפסד</string>
+    <string name="no_positions">אין פוזיציות עדיין</string>
+    <string name="no_resolved">אין הימורים שהסתיימו עדיין</string>
+    <string name="shares_label">מניות</string>
+    <string name="paid_label">שולם</string>
+
+    <!-- Account -->
+    <string name="balance">יתרה</string>
+    <string name="win_rate">אחוז הצלחה</string>
+    <string name="total_winnings">סה״כ רווחים</string>
+    <string name="total_bets">סה״כ הימורים</string>
+    <string name="refill_balance">מלא יתרה (+1,000 ש״פ)</string>
+    <string name="balance_refilled">היתרה מולאה! +1,000 ש״פ</string>
+    <string name="prophet_title">נביא</string>
+
+    <!-- Tags -->
+    <string name="tag_politics">פוליטיקה</string>
+    <string name="tag_pop_culture">תרבות פופ</string>
+    <string name="tag_crypto">קריפטו</string>
+    <string name="tag_science">מדע</string>
+    <string name="tag_sports">ספורט</string>
+</resources>

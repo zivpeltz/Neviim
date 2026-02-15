@@ -1,0 +1,235 @@
+package com.neviim.market.ui.screen
+
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.neviim.market.R
+import com.neviim.market.data.model.Event
+import com.neviim.market.data.model.EventTag
+import com.neviim.market.ui.components.ProbabilityBar
+import com.neviim.market.ui.components.formatPercent
+import com.neviim.market.ui.components.formatSP
+import com.neviim.market.ui.theme.*
+import com.neviim.market.ui.viewmodel.ExploreViewModel
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ExploreScreen(
+    onEventClick: (String) -> Unit,
+    viewModel: ExploreViewModel = viewModel()
+) {
+    val events by viewModel.filteredEvents.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val selectedTag by viewModel.selectedTag.collectAsState()
+
+    val tagStringMap = mapOf(
+        EventTag.POLITICS to stringResource(R.string.tag_politics),
+        EventTag.POP_CULTURE to stringResource(R.string.tag_pop_culture),
+        EventTag.CRYPTO to stringResource(R.string.tag_crypto),
+        EventTag.SCIENCE to stringResource(R.string.tag_science),
+        EventTag.SPORTS to stringResource(R.string.tag_sports)
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        // ── Header ──────────────────────────────────────────────
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 2.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 16.dp,
+                    bottom = 8.dp
+                )
+            ) {
+                Text(
+                    text = stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Search bar
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { viewModel.updateSearch(it) },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = {
+                        Text(stringResource(R.string.search_events))
+                    },
+                    leadingIcon = {
+                        Icon(Icons.Default.Search, contentDescription = null)
+                    },
+                    shape = RoundedCornerShape(16.dp),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Filter chips
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    item {
+                        FilterChip(
+                            selected = selectedTag == null,
+                            onClick = { viewModel.selectTag(null) },
+                            label = { Text(stringResource(R.string.all_filter)) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                            )
+                        )
+                    }
+                    items(EventTag.entries.toList()) { tag ->
+                        FilterChip(
+                            selected = selectedTag == tag,
+                            onClick = { viewModel.selectTag(tag) },
+                            label = { Text(tagStringMap[tag] ?: tag.displayName) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
+        // ── Event Feed ──────────────────────────────────────────
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(events, key = { it.id }) { event ->
+                EventCard(
+                    event = event,
+                    tagLabel = tagStringMap[event.tag] ?: event.tag.displayName,
+                    onClick = { onEventClick(event.id) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EventCard(
+    event: Event,
+    tagLabel: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            // Tag badge
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+            ) {
+                Text(
+                    text = tagLabel,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Title
+            Text(
+                text = event.title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Probability bar
+            ProbabilityBar(yesProbability = event.yesProbability)
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Bottom row: probability + volume
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = YesColor.copy(alpha = 0.2f)
+                    ) {
+                        Text(
+                            text = "${stringResource(R.string.yes_label)} ${formatPercent(event.yesProbability)}",
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = YesColor,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.TrendingUp,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "${stringResource(R.string.volume_label)}: ${formatSP(event.totalVolume)}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}

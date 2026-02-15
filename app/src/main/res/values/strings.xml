@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Neviim</string>
+
+    <!-- Bottom Nav -->
+    <string name="nav_explore">Explore</string>
+    <string name="nav_my_bids">My Bids</string>
+    <string name="nav_account">My Account</string>
+
+    <!-- Explore Screen -->
+    <string name="search_events">Search events…</string>
+    <string name="all_filter">All</string>
+    <string name="yes_label">Yes</string>
+    <string name="no_label">No</string>
+    <string name="volume_label">Volume</string>
+    <string name="sp_currency">SP</string>
+
+    <!-- Event Detail -->
+    <string name="probability_history">Probability History</string>
+    <string name="trade">Trade</string>
+    <string name="buy_yes">Buy YES</string>
+    <string name="buy_no">Buy NO</string>
+    <string name="amount_sp">Amount (SP)</string>
+    <string name="estimated_return">Est. Return</string>
+    <string name="place_trade">Place Trade</string>
+    <string name="enter_amount">Enter amount</string>
+    <string name="insufficient_balance">Insufficient balance!</string>
+    <string name="trade_successful">Trade placed successfully!</string>
+    <string name="current_probability">Current Probability</string>
+
+    <!-- Portfolio -->
+    <string name="active_positions">Active</string>
+    <string name="resolved_positions">Resolved</string>
+    <string name="side">Side</string>
+    <string name="entry_price">Entry</string>
+    <string name="current_price">Current</string>
+    <string name="pnl">P\u0026L</string>
+    <string name="no_positions">No positions yet</string>
+    <string name="no_resolved">No resolved bets yet</string>
+    <string name="shares_label">Shares</string>
+    <string name="paid_label">Paid</string>
+
+    <!-- Account -->
+    <string name="balance">Balance</string>
+    <string name="win_rate">Win Rate</string>
+    <string name="total_winnings">Total Winnings</string>
+    <string name="total_bets">Total Bets</string>
+    <string name="refill_balance">Refill Balance (+1,000 SP)</string>
+    <string name="balance_refilled">Balance refilled! +1,000 SP</string>
+    <string name="prophet_title">Prophet</string>
+
+    <!-- Tags -->
+    <string name="tag_politics">Politics</string>
+    <string name="tag_pop_culture">Pop Culture</string>
+    <string name="tag_crypto">Crypto</string>
+    <string name="tag_science">Science</string>
+    <string name="tag_sports">Sports</string>
+</resources>
