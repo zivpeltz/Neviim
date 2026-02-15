@@ -25,7 +25,7 @@ Think [Polymarket](https://polymarket.com), but with falafel money.
 
 ## 📱 Screenshots
 
-> *Coming soon — enable SVM in your BIOS first 😅*
+> *Coming soon 😅*
 
 ---
 
@@ -109,7 +109,7 @@ To test Hebrew: **Settings → System → Languages → Add Hebrew → drag to t
 
 ```bash
 # Clone the repo
-git clone <your-repo-url>
+git clone https://github.com/zivpeltz/Neviim.git
 cd "Israel Polymarket"
 
 # Open in Android Studio and press Run
