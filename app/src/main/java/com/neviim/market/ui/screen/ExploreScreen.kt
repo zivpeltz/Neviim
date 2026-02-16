@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,11 +21,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.neviim.market.R
 import com.neviim.market.data.model.Event
+import com.neviim.market.data.model.EventOption
 import com.neviim.market.data.model.EventTag
+import com.neviim.market.data.model.EventType
 import com.neviim.market.ui.components.ProbabilityBar
 import com.neviim.market.ui.components.formatPercent
 import com.neviim.market.ui.components.formatSP
@@ -180,18 +184,39 @@ private fun EventCard(
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            // Tag badge
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+            // Top row: tag + event type badge
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = tagLabel,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                ) {
+                    Text(
+                        text = tagLabel,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                if (event.eventType == EventType.MULTI_CHOICE) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
+                    ) {
+                        Text(
+                            text = "${event.options.size} ${stringResource(R.string.options_count_label)}",
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -201,23 +226,48 @@ private fun EventCard(
                 text = event.title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Probability bar
-            ProbabilityBar(yesProbability = event.yesProbability)
+            // Content depends on event type
+            if (event.eventType == EventType.BINARY) {
+                // Probability bar for binary
+                ProbabilityBar(yesProbability = event.yesProbability)
+            } else {
+                // Show top options for multi-choice
+                val sortedOptions = event.options.sortedByDescending {
+                    EventOption.probability(it, event.options)
+                }
+                sortedOptions.take(3).forEach { option ->
+                    val prob = EventOption.probability(option, event.options)
+                    MultiChoiceOptionPreview(
+                        label = option.label,
+                        probability = prob
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+                if (sortedOptions.size > 3) {
+                    Text(
+                        text = "+${sortedOptions.size - 3} ${stringResource(R.string.more_options_label)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Bottom row: probability + volume
+            // Bottom row: probability/leading option + volume + end date
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                if (event.eventType == EventType.BINARY) {
                     Surface(
                         shape = RoundedCornerShape(8.dp),
                         color = YesColor.copy(alpha = 0.2f)
@@ -230,23 +280,110 @@ private fun EventCard(
                             fontWeight = FontWeight.Bold
                         )
                     }
+                } else {
+                    // Show leading option as a badge
+                    val leader = event.options.maxByOrNull {
+                        EventOption.probability(it, event.options)
+                    }
+                    if (leader != null) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                        ) {
+                            Text(
+                                text = "${leader.label} ${formatPercent(EventOption.probability(leader, event.options))}",
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         Icons.Default.TrendingUp,
                         contentDescription = null,
-                        modifier = Modifier.size(16.dp),
+                        modifier = Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(3.dp))
                     Text(
-                        text = "${stringResource(R.string.volume_label)}: ${formatSP(event.totalVolume)}",
-                        style = MaterialTheme.typography.labelMedium,
+                        text = formatSP(event.totalVolume),
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+
+                    if (event.endDate != null) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        val daysLeft = ((event.endDate - System.currentTimeMillis()) / 86_400_000L)
+                            .coerceAtLeast(0)
+                        Icon(
+                            Icons.Default.AccessTime,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(
+                            text = "${daysLeft}d",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun MultiChoiceOptionPreview(
+    label: String,
+    probability: Double
+) {
+    val percent = (probability * 100).toInt()
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+
+        // Mini progress bar
+        Box(
+            modifier = Modifier
+                .width(80.dp)
+                .height(6.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(fraction = probability.toFloat().coerceIn(0.02f, 1f))
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(MaterialTheme.colorScheme.primary)
+            )
+        }
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = "$percent%",
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
     }
 }

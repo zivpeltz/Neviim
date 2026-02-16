@@ -3,26 +3,103 @@ package com.neviim.market.data.model
 import java.util.UUID
 
 /**
- * Represents a binary prediction market event with AMM pools.
+ * Represents a prediction market event. Supports both binary (Yes/No)
+ * and multi-choice events (e.g. "Who wins the election?" with 3+ options).
+ *
+ * For binary events, [options] contains exactly two entries (Yes and No).
+ * For multi-choice events, [options] contains 2+ custom entries.
+ *
+ * Each option has its own AMM pool; probabilities are derived via
+ * pool-ratio pricing across all options.
  */
 data class Event(
     val id: String = UUID.randomUUID().toString(),
     val title: String,
     val titleHe: String,
+    val description: String = "",
+    val descriptionHe: String = "",
     val tag: EventTag,
-    val yesPool: Double,
-    val noPool: Double,
+    val eventType: EventType = EventType.BINARY,
+    val options: List<EventOption> = emptyList(),
     val totalVolume: Double = 0.0,
     val isResolved: Boolean = false,
-    val resolvedOutcome: Boolean? = null, // true = Yes won, false = No won
+    val resolvedOptionId: String? = null,
     val priceHistory: List<PricePoint> = emptyList(),
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val endDate: Long? = null,
+    val totalTraders: Int = 0
 ) {
+    // ── Binary compatibility helpers ────────────────────────────────
+    // Kept so existing binary UI code doesn't break.
+
+    /** Legacy pool values for binary events. */
+    val yesPool: Double
+        get() = options.firstOrNull()?.pool ?: 0.0
+
+    val noPool: Double
+        get() = if (options.size >= 2) options[1].pool else 0.0
+
     val yesProbability: Double
-        get() = if (yesPool + noPool > 0) noPool / (yesPool + noPool) else 0.5
+        get() {
+            val yes = yesPool
+            val no = noPool
+            return if (yes + no > 0) no / (yes + no) else 0.5
+        }
 
     val noProbability: Double
-        get() = if (yesPool + noPool > 0) yesPool / (yesPool + noPool) else 0.5
+        get() {
+            val yes = yesPool
+            val no = noPool
+            return if (yes + no > 0) yes / (yes + no) else 0.5
+        }
+
+    /** Legacy resolvedOutcome for binary events. */
+    val resolvedOutcome: Boolean?
+        get() = when {
+            !isResolved -> null
+            resolvedOptionId == options.firstOrNull()?.id -> true
+            else -> false
+        }
+
+    /** Total liquidity across all option pools. */
+    val totalLiquidity: Double
+        get() = options.sumOf { it.pool }
+}
+
+enum class EventType {
+    /** Classic Yes / No market. */
+    BINARY,
+    /** Multiple mutually-exclusive outcomes. */
+    MULTI_CHOICE
+}
+
+/**
+ * A single outcome option within an event.
+ */
+data class EventOption(
+    val id: String = UUID.randomUUID().toString(),
+    val label: String,
+    val labelHe: String = "",
+    val pool: Double = 500.0
+) {
+    /**
+     * Calculate this option's probability given the full list of options.
+     * Uses pool-ratio: P(i) = (totalPool - pool_i) / ((n-1) * totalPool)
+     * For binary, this simplifies to the standard formula.
+     */
+    companion object {
+        fun probability(option: EventOption, allOptions: List<EventOption>): Double {
+            if (allOptions.size < 2) return 1.0
+            val totalPool = allOptions.sumOf { it.pool }
+            if (totalPool <= 0) return 1.0 / allOptions.size
+
+            // For n options, use: P(i) = (product of all other pools) / (sum of products)
+            // Simplified approximation using inverse-pool weighting:
+            // P(i) = (1/pool_i) / sum(1/pool_j)
+            val inverseSum = allOptions.sumOf { 1.0 / it.pool.coerceAtLeast(0.01) }
+            return (1.0 / option.pool.coerceAtLeast(0.01)) / inverseSum
+        }
+    }
 }
 
 enum class EventTag(val displayName: String, val displayNameHe: String) {
@@ -49,6 +126,8 @@ data class UserPosition(
     val eventId: String,
     val eventTitle: String,
     val eventTitleHe: String,
+    val optionId: String = "",
+    val optionLabel: String = "",
     val side: TradeSide,
     val shares: Double,
     val entryPrice: Double,

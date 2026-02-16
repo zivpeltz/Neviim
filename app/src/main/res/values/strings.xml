@@ -14,6 +14,8 @@
     <string name="no_label">No</string>
     <string name="volume_label">Volume</string>
     <string name="sp_currency">SP</string>
+    <string name="options_count_label">options</string>
+    <string name="more_options_label">more</string>
 
     <!-- Event Detail -->
     <string name="probability_history">Probability History</string>
@@ -27,6 +29,13 @@
     <string name="insufficient_balance">Insufficient balance!</string>
     <string name="trade_successful">Trade placed successfully!</string>
     <string name="current_probability">Current Probability</string>
+    <string name="liquidity_label">Liquidity</string>
+    <string name="traders_label">Traders</string>
+    <string name="ends_label">Ends</string>
+    <string name="pool_breakdown_label">Pool Breakdown</string>
+    <string name="options_label">Options</string>
+    <string name="in_pool_label">in pool</string>
+    <string name="selected_option">Selected</string>
 
     <!-- Portfolio -->
     <string name="active_positions">Active</string>
@@ -58,12 +67,27 @@
 
     <!-- Create Event -->
     <string name="create_event_title">Create Event</string>
+    <string name="create_event_type">Event Type</string>
+    <string name="type_binary">Yes / No</string>
+    <string name="type_multi_choice">Multiple Choice</string>
     <string name="create_event_name">Event Title</string>
     <string name="create_event_name_hint">e.g. Will it snow in Jerusalem?</string>
     <string name="create_event_name_he">Event Title (Hebrew)</string>
     <string name="create_event_name_he_hint">לדוגמה: האם ירד שלג בירושלים?</string>
+    <string name="create_event_description">Description</string>
+    <string name="create_event_description_hint">How will this event be resolved?</string>
     <string name="create_event_category">Category</string>
     <string name="create_event_probability">Starting Probability</string>
+    <string name="create_event_end_date">End Date</string>
+    <string name="select_end_date">Select end date (optional)</string>
+    <string name="confirm_label">Confirm</string>
+    <string name="no_end_date_label">No End Date</string>
+    <string name="create_event_options">Answer Options</string>
+    <string name="option_label">Option</string>
+    <string name="option_en_hint">Option name (English)</string>
+    <string name="option_he_hint">שם האפשרות (עברית)</string>
+    <string name="add_option">Add Option</string>
+    <string name="remove_option">Remove</string>
     <string name="create_event_submit">Create Event</string>
     <string name="back">Back</string>
 </resources>

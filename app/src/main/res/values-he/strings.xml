@@ -14,6 +14,8 @@
     <string name="no_label">לא</string>
     <string name="volume_label">נפח</string>
     <string name="sp_currency">ש״פ</string>
+    <string name="options_count_label">אפשרויות</string>
+    <string name="more_options_label">עוד</string>
 
     <!-- Event Detail -->
     <string name="probability_history">היסטוריית הסתברות</string>
@@ -27,6 +29,13 @@
     <string name="insufficient_balance">יתרה לא מספיקה!</string>
     <string name="trade_successful">העסקה בוצעה בהצלחה!</string>
     <string name="current_probability">הסתברות נוכחית</string>
+    <string name="liquidity_label">נזילות</string>
+    <string name="traders_label">סוחרים</string>
+    <string name="ends_label">מסתיים</string>
+    <string name="pool_breakdown_label">פירוט מאגר</string>
+    <string name="options_label">אפשרויות</string>
+    <string name="in_pool_label">במאגר</string>
+    <string name="selected_option">נבחר</string>
 
     <!-- Portfolio -->
     <string name="active_positions">פעיל</string>
@@ -58,12 +67,27 @@
 
     <!-- Create Event -->
     <string name="create_event_title">יצירת אירוע</string>
+    <string name="create_event_type">סוג אירוע</string>
+    <string name="type_binary">כן / לא</string>
+    <string name="type_multi_choice">רב ברירה</string>
     <string name="create_event_name">שם האירוע</string>
     <string name="create_event_name_hint">לדוגמה: האם ירד שלג בירושלים?</string>
     <string name="create_event_name_he">שם האירוע (עברית)</string>
     <string name="create_event_name_he_hint">e.g. Will it snow in Jerusalem?</string>
+    <string name="create_event_description">תיאור</string>
+    <string name="create_event_description_hint">כיצד ייפתר אירוע זה?</string>
     <string name="create_event_category">קטגוריה</string>
     <string name="create_event_probability">הסתברות התחלתית</string>
+    <string name="create_event_end_date">תאריך סיום</string>
+    <string name="select_end_date">בחר תאריך סיום (אופציונלי)</string>
+    <string name="confirm_label">אישור</string>
+    <string name="no_end_date_label">ללא תאריך סיום</string>
+    <string name="create_event_options">אפשרויות תשובה</string>
+    <string name="option_label">אפשרות</string>
+    <string name="option_en_hint">שם האפשרות (אנגלית)</string>
+    <string name="option_he_hint">שם האפשרות (עברית)</string>
+    <string name="add_option">הוסף אפשרות</string>
+    <string name="remove_option">הסר</string>
     <string name="create_event_submit">צור אירוע</string>
     <string name="back">חזור</string>
 </resources>
