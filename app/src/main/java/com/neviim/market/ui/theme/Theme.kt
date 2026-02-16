@@ -5,10 +5,13 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import com.neviim.market.data.repository.SettingsRepository
 
 private val DarkColorScheme = darkColorScheme(
     primary = Teal40,
@@ -52,9 +55,15 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun NeviimTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
+    val themeMode by SettingsRepository.themeMode.collectAsState()
+    val darkTheme = when (themeMode) {
+        SettingsRepository.ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        SettingsRepository.ThemeMode.LIGHT -> false
+        SettingsRepository.ThemeMode.DARK -> true
+    }
+
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
     val view = LocalView.current

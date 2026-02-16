@@ -30,6 +30,7 @@ object Routes {
     const val CREATE_EVENT = "create_event"
     const val PORTFOLIO = "portfolio"
     const val ACCOUNT = "account"
+    const val SETTINGS = "settings"
 
     fun eventDetail(eventId: String) = "event_detail/$eventId"
 }
@@ -160,7 +161,17 @@ fun NeviimNavHost() {
             }
 
             composable(Routes.ACCOUNT) {
-                AccountScreen()
+                AccountScreen(
+                    onSettingsClick = {
+                        navController.navigate(Routes.SETTINGS)
+                    }
+                )
+            }
+
+            composable(Routes.SETTINGS) {
+                SettingsScreen(
+                    onBack = { navController.popBackStack() }
+                )
             }
         }
     }

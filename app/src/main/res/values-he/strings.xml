@@ -90,4 +90,35 @@
     <string name="remove_option">הסר</string>
     <string name="create_event_submit">צור אירוע</string>
     <string name="back">חזור</string>
+
+    <!-- Settings -->
+    <string name="settings_title">הגדרות</string>
+    <string name="settings_section_appearance">מראה</string>
+    <string name="settings_theme">ערכת נושא</string>
+    <string name="theme_system">ברירת מחדל של המערכת</string>
+    <string name="theme_light">בהיר</string>
+    <string name="theme_dark">כהה</string>
+    <string name="settings_language">שפה</string>
+    <string name="settings_language_subtitle">שנה דרך הגדרות שפת המערכת</string>
+    <string name="settings_section_updates">עדכונים</string>
+    <string name="settings_check_updates">בדוק עדכונים</string>
+    <string name="settings_check_updates_subtitle">בדוק ב-GitHub אם יש גרסאות חדשות</string>
+    <string name="update_checking">בודק…</string>
+    <string name="update_up_to_date">הכל מעודכן! ✓</string>
+    <string name="update_available">עדכון זמין</string>
+    <string name="update_new_commit">נמצאו שינויים חדשים</string>
+    <string name="update_downloading">מוריד עדכון…</string>
+    <string name="update_download">הורד עדכון</string>
+    <string name="update_error">שגיאה בבדיקה</string>
+    <string name="settings_section_about">אודות</string>
+    <string name="settings_about">אודות נביאים</string>
+    <string name="about_description">נביאים הוא אפליקציית שוק ניבויים בכסף משחק. הימרו שקלפוינטס על העתיד — בלי כסף אמיתי, רק נבואה.</string>
+    <string name="about_version">גרסה</string>
+    <string name="about_developer">מפתח</string>
+    <string name="about_github_url">github.com/zivpeltz/Neviim</string>
+    <string name="settings_source_code">קוד מקור</string>
+    <string name="settings_privacy">פרטיות</string>
+    <string name="settings_privacy_subtitle">לא נאסף או משותף מידע</string>
+    <string name="settings_dismiss">אישור</string>
+    <string name="settings_footer">נוצר עם ☕ וחוצפה\nשקלפוינטס לא שווים כלום 🕎</string>
 </resources>
