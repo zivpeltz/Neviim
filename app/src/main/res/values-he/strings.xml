@@ -55,4 +55,15 @@
     <string name="tag_crypto">קריפטו</string>
     <string name="tag_science">מדע</string>
     <string name="tag_sports">ספורט</string>
+
+    <!-- Create Event -->
+    <string name="create_event_title">יצירת אירוע</string>
+    <string name="create_event_name">שם האירוע</string>
+    <string name="create_event_name_hint">לדוגמה: האם ירד שלג בירושלים?</string>
+    <string name="create_event_name_he">שם האירוע (עברית)</string>
+    <string name="create_event_name_he_hint">e.g. Will it snow in Jerusalem?</string>
+    <string name="create_event_category">קטגוריה</string>
+    <string name="create_event_probability">הסתברות התחלתית</string>
+    <string name="create_event_submit">צור אירוע</string>
+    <string name="back">חזור</string>
 </resources>

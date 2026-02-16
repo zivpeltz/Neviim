@@ -151,6 +151,32 @@ object MarketRepository {
         _userProfile.update { it.copy(balance = it.balance + amount) }
     }
 
+    // ── Event creation ──────────────────────────────────────────────────
+    private var nextEventId = 6
+
+    fun createEvent(
+        title: String,
+        titleHe: String,
+        tag: EventTag,
+        initialYesProbability: Double = 0.50
+    ): Event {
+        val totalPool = 1000.0
+        val yesPool = totalPool * (1.0 - initialYesProbability)
+        val noPool = totalPool * initialYesProbability
+        val event = Event(
+            id = "evt_${nextEventId++}",
+            title = title,
+            titleHe = titleHe.ifBlank { title },
+            tag = tag,
+            yesPool = yesPool,
+            noPool = noPool,
+            totalVolume = 0.0,
+            priceHistory = generateMockHistory(initialYesProbability, 5)
+        )
+        _events.update { it + event }
+        return event
+    }
+
     /**
      * Returns the current price for a given position's side,
      * used for PnL calculation.

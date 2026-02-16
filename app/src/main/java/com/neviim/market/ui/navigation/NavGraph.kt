@@ -27,6 +27,7 @@ import com.neviim.market.ui.screen.*
 object Routes {
     const val EXPLORE = "explore"
     const val EVENT_DETAIL = "event_detail/{eventId}"
+    const val CREATE_EVENT = "create_event"
     const val PORTFOLIO = "portfolio"
     const val ACCOUNT = "account"
 
@@ -128,7 +129,16 @@ fun NeviimNavHost() {
                 ExploreScreen(
                     onEventClick = { eventId ->
                         navController.navigate(Routes.eventDetail(eventId))
+                    },
+                    onCreateEvent = {
+                        navController.navigate(Routes.CREATE_EVENT)
                     }
+                )
+            }
+
+            composable(Routes.CREATE_EVENT) {
+                CreateEventScreen(
+                    onBack = { navController.popBackStack() }
                 )
             }
 
