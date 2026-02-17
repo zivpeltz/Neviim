@@ -34,7 +34,7 @@ Think [Polymarket](https://polymarket.com), but with falafel money.
 ```
 app/src/main/java/com/neviim/market/
 ├── data/
-│   ├── amm/          # AMM pricing engine (pool-ratio + inverse-pool)
+│   ├── amm/          # AMM pricing engine (direct pool-ratio)
 │   ├── model/        # Event, EventOption, UserPosition, UserProfile
 │   └── repository/   # In-memory reactive repository (StateFlow)
 ├── ui/
@@ -62,19 +62,19 @@ app/src/main/java/com/neviim/market/
 
 ### Binary Events (Yes / No)
 
-Prices are calculated using a **pool-ratio formula**:
+Prices are calculated using a **direct pool-ratio formula**:
 
 ```
-Price(Yes) = NoPool / (YesPool + NoPool)
-Price(No)  = YesPool / (YesPool + NoPool)
+Price(Yes) = YesPool / (YesPool + NoPool)
+Price(No)  = NoPool  / (YesPool + NoPool)
 ```
 
 ### Multi-Choice Events
 
-For events with multiple outcomes, probability is calculated via **inverse-pool weighting**:
+For events with multiple outcomes, probability is calculated via **direct pool weighting**:
 
 ```
-P(option_i) = (1 / pool_i) / Σ(1 / pool_j)
+P(option_i) = pool_i / Σ(pool_j)
 ```
 
 When a user buys shares of any option:
@@ -160,11 +160,11 @@ The app comes pre-loaded with **8 events** (5 binary + 3 multi-choice):
 
 | Event | Tag | Starting Yes % |
 |-------|-----|:--------------:|
-| Will it rain in Tel Aviv tomorrow? | 🔬 Science | 60% |
-| Bitcoin > $100k by end of 2026? | 💰 Crypto | 65% |
+| Will it rain in Tel Aviv tomorrow? | 🔬 Science | 40% |
+| Bitcoin > $100k by end of 2026? | 💰 Crypto | 35% |
 | Will elections be held before 2027? | 🏛️ Politics | 50% |
-| Will Netta win Eurovision 2026? | 🎭 Pop Culture | 80% |
-| Israel wins gold at 2028 Olympics? | ⚽ Sports | 85% |
+| Will Netta win Eurovision 2026? | 🎭 Pop Culture | 20% |
+| Israel wins gold at 2028 Olympics? | ⚽ Sports | 15% |
 
 ### Multi-Choice Events
 

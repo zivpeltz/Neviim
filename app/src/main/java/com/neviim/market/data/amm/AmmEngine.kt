@@ -8,15 +8,16 @@ import com.neviim.market.data.model.TradeSide
  * Simplified Automated Market Maker engine using a pool-ratio pricing model.
  *
  * For binary events:
- *   Price(Yes) = NoPool / (YesPool + NoPool)
- *   Price(No)  = YesPool / (YesPool + NoPool)
+ *   Price(Yes) = YesPool / (YesPool + NoPool)
+ *   Price(No)  = NoPool  / (YesPool + NoPool)
  *
  * For multi-choice events:
- *   Each option has a pool; probability is derived via inverse-pool weighting
- *   across all options.
+ *   Each option has a pool; probability is derived via direct-pool weighting
+ *   across all options: P(i) = pool_i / totalPool.
  *
  * When a user buys shares of an option:
  *   - They pay `amount` SP, which is added to that option's pool
+ *   - The option's probability increases (more demand → higher price)
  *   - Shares received = amount / price_at_execution
  *   - If the event resolves to that option, each share pays 1 SP
  */

@@ -43,14 +43,14 @@ data class Event(
         get() {
             val yes = yesPool
             val no = noPool
-            return if (yes + no > 0) no / (yes + no) else 0.5
+            return if (yes + no > 0) yes / (yes + no) else 0.5
         }
 
     val noProbability: Double
         get() {
             val yes = yesPool
             val no = noPool
-            return if (yes + no > 0) yes / (yes + no) else 0.5
+            return if (yes + no > 0) no / (yes + no) else 0.5
         }
 
     /** Legacy resolvedOutcome for binary events. */
@@ -84,7 +84,7 @@ data class EventOption(
 ) {
     /**
      * Calculate this option's probability given the full list of options.
-     * Uses pool-ratio: P(i) = (totalPool - pool_i) / ((n-1) * totalPool)
+     * Uses direct pool weighting: P(i) = pool_i / totalPool
      * For binary, this simplifies to the standard formula.
      */
     companion object {
@@ -93,11 +93,9 @@ data class EventOption(
             val totalPool = allOptions.sumOf { it.pool }
             if (totalPool <= 0) return 1.0 / allOptions.size
 
-            // For n options, use: P(i) = (product of all other pools) / (sum of products)
-            // Simplified approximation using inverse-pool weighting:
-            // P(i) = (1/pool_i) / sum(1/pool_j)
-            val inverseSum = allOptions.sumOf { 1.0 / it.pool.coerceAtLeast(0.01) }
-            return (1.0 / option.pool.coerceAtLeast(0.01)) / inverseSum
+            // Direct pool weighting: more SP in the pool = higher probability.
+            // P(i) = pool_i / totalPool
+            return option.pool / totalPool
         }
     }
 }

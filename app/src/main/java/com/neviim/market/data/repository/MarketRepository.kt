@@ -298,8 +298,8 @@ object MarketRepository {
         endDate: Long? = null
     ): Event {
         val totalPool = 1000.0
-        val yesPool = totalPool * (1.0 - initialYesProbability)
-        val noPool = totalPool * initialYesProbability
+        val yesPool = totalPool * initialYesProbability
+        val noPool = totalPool * (1.0 - initialYesProbability)
         val event = Event(
             id = "evt_${nextEventId++}",
             title = title,
