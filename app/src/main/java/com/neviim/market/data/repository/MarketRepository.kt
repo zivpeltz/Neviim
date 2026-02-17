@@ -1,17 +1,44 @@
 package com.neviim.market.data.repository
 
+import android.content.Context
 import com.neviim.market.data.amm.AmmEngine
 import com.neviim.market.data.model.*
+import com.neviim.market.data.storage.EventStorage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 /**
- * In-memory repository for the Neviim prototype.
+ * Repository for the Neviim app.
  * Acts as a single source of truth for events, positions, and user profile.
+ * Events are persisted to internal storage as JSON.
  */
 object MarketRepository {
+
+    private lateinit var appContext: Context
+
+    /**
+     * Initialize with app context. Loads persisted events or seeds on first launch.
+     * Must be called from Application.onCreate().
+     */
+    fun init(context: Context) {
+        appContext = context.applicationContext
+        val stored = EventStorage.load(appContext)
+        if (stored != null) {
+            _events.value = stored
+            // Set nextEventId higher than any existing event
+            nextEventId = stored.maxOfOrNull { id ->
+                id.id.removePrefix("evt_").toIntOrNull() ?: 0
+            }?.plus(1) ?: 9
+        }
+    }
+
+    private fun persistEvents() {
+        if (::appContext.isInitialized) {
+            EventStorage.save(appContext, _events.value)
+        }
+    }
 
     // ── Mock price history generator ────────────────────────────────────
     private fun generateMockHistory(basePrice: Double, points: Int = 20): List<PricePoint> {
@@ -211,6 +238,7 @@ object MarketRepository {
         _events.update { list ->
             list.map { if (it.id == eventId) tradeResult.updatedEvent else it }
         }
+        persistEvents()
 
         val option = if (side == TradeSide.YES) event.options.firstOrNull() else event.options.getOrNull(1)
 
@@ -254,6 +282,7 @@ object MarketRepository {
         _events.update { list ->
             list.map { if (it.id == eventId) tradeResult.updatedEvent else it }
         }
+        persistEvents()
 
         // For multi-choice, side is always YES (you're betting that option wins)
         val position = UserPosition(
@@ -314,6 +343,7 @@ object MarketRepository {
             endDate = endDate
         )
         _events.update { it + event }
+        persistEvents()
         return event
     }
 
@@ -350,6 +380,7 @@ object MarketRepository {
             endDate = endDate
         )
         _events.update { it + event }
+        persistEvents()
         return event
     }
 

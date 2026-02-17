@@ -1,5 +1,11 @@
 package com.neviim.market
 
 import android.app.Application
+import com.neviim.market.data.repository.MarketRepository
 
-class NeviimApp : Application()
+class NeviimApp : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        MarketRepository.init(this)
+    }
+}
