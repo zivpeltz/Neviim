@@ -110,6 +110,7 @@
     <string name="update_downloading">מוריד עדכון…</string>
     <string name="update_download">הורד עדכון</string>
     <string name="update_error">שגיאה בבדיקה</string>
+    <string name="update_view_release">צפה בעדכון</string>
     <string name="settings_section_about">אודות</string>
     <string name="settings_about">אודות נביאים</string>
     <string name="about_description">נביאים הוא אפליקציית שוק ניבויים בכסף משחק. הימרו שקלפוינטס על העתיד — בלי כסף אמיתי, רק נבואה.</string>

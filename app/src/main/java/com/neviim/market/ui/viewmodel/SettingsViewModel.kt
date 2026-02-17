@@ -1,6 +1,8 @@
 package com.neviim.market.ui.viewmodel
 
 import android.app.Application
+import android.content.Intent
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.neviim.market.data.repository.SettingsRepository
@@ -59,6 +61,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                 is AppUpdater.CommitCheckResult.NewCommit -> {
                     UpdateStatus.NewCommitAvailable(
                         sha = commitResult.sha,
+                        fullSha = commitResult.fullSha,
                         message = commitResult.message
                     )
                 }
@@ -77,6 +80,26 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         _updateStatus.value = UpdateStatus.Downloading
     }
 
+    /**
+     * Open the GitHub releases page so the user can download the latest APK.
+     * Also mark the commit as seen so future checks don't keep flagging it.
+     */
+    fun openReleasesPage() {
+        val status = _updateStatus.value
+        if (status is UpdateStatus.NewCommitAvailable) {
+            AppUpdater.markCommitSeen(getApplication(), status.fullSha)
+        }
+
+        val intent = Intent(
+            Intent.ACTION_VIEW,
+            Uri.parse("https://github.com/zivpeltz/Neviim/releases")
+        ).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        getApplication<Application>().startActivity(intent)
+        _updateStatus.value = UpdateStatus.Idle
+    }
+
     fun dismissUpdateStatus() {
         _updateStatus.value = UpdateStatus.Idle
     }
@@ -93,6 +116,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         ) : UpdateStatus()
         data class NewCommitAvailable(
             val sha: String,
+            val fullSha: String,
             val message: String
         ) : UpdateStatus()
         data class Error(val message: String) : UpdateStatus()

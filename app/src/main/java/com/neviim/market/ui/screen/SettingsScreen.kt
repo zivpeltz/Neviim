@@ -258,6 +258,27 @@ fun SettingsScreen(
                 }
             }
 
+            // Show "View Update" button when a new commit is available
+            if (updateStatus is SettingsViewModel.UpdateStatus.NewCommitAvailable) {
+                Button(
+                    onClick = { viewModel.openReleasesPage() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 32.dp, vertical = 8.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Icon(Icons.Default.OpenInNew, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.update_view_release),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
             HorizontalDivider(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)

@@ -44,6 +44,7 @@ object AppUpdater {
     sealed class CommitCheckResult {
         data class NewCommit(
             val sha: String,
+            val fullSha: String,
             val message: String,
             val date: String
         ) : CommitCheckResult()
@@ -151,22 +152,30 @@ object AppUpdater {
                 return@withContext CommitCheckResult.UpToDate
             }
 
-            // Store new SHA
-            prefs.edit().putString("last_sha", sha).apply()
-
-            // If this is the first time (no stored SHA), treat as up-to-date
+            // If this is the first time (no stored SHA), save and treat as up-to-date
             if (storedSha.isEmpty()) {
+                prefs.edit().putString("last_sha", sha).apply()
                 return@withContext CommitCheckResult.UpToDate
             }
 
+            // Don't save the SHA yet — let the caller save it after the user acts
             CommitCheckResult.NewCommit(
                 sha = sha.take(7),
+                fullSha = sha,
                 message = message.lines().firstOrNull() ?: message,
                 date = date
             )
         } catch (e: Exception) {
             CommitCheckResult.Error(e.message ?: "Unknown error")
         }
+    }
+
+    /**
+     * Mark a commit SHA as seen so future checks treat it as up-to-date.
+     */
+    fun markCommitSeen(context: Context, fullSha: String) {
+        val prefs = context.getSharedPreferences("neviim_updater", Context.MODE_PRIVATE)
+        prefs.edit().putString("last_sha", fullSha).apply()
     }
 
     /**
