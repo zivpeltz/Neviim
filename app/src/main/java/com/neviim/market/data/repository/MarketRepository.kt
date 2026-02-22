@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 object MarketRepository {
 
@@ -135,12 +137,14 @@ object MarketRepository {
                                     description = ge.description ?: "",
                                     tag = tag,
                                     tagLabel = firstTag,
-                                    conditionId = validMarkets.first().conditionId,
+                                    conditionId = validMarkets.first().conditionId ?: validMarkets.first().id,
                                     eventType = EventType.MULTI_CHOICE,
                                     options = options,
                                     totalVolume = validMarkets.sumOf { it.volumeNum },
                                     isResolved = false,
                                     resolutionSource = validMarkets.first().resolutionSource,
+                                    endDate = parseIsoDate(ge.endDateIso),
+                                    createdAt = parseIsoDate(ge.startDateIso) ?: System.currentTimeMillis(),
                                     image = ge.image
                                 )
                             )
@@ -196,12 +200,14 @@ object MarketRepository {
                 description = ge.description ?: "",
                 tag = tag,
                 tagLabel = ge.tags.firstOrNull()?.label ?: "",
-                conditionId = gm.conditionId,
+                conditionId = gm.conditionId ?: gm.id,
                 eventType = type,
                 options = options,
                 totalVolume = gm.volumeNum,
                 isResolved = gm.closed,
                 resolutionSource = gm.resolutionSource,
+                endDate = parseIsoDate(ge.endDateIso) ?: parseIsoDate(gm.endDateIso),
+                createdAt = parseIsoDate(ge.startDateIso) ?: System.currentTimeMillis(),
                 image = ge.image
             )
         )
@@ -209,8 +215,18 @@ object MarketRepository {
 
     fun getEvent(eventId: String): Event? = _events.value.find { it.id == eventId }
 
+    private val isoFmt = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
+    private val isoFmtMs = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
+
+    private fun parseIsoDate(iso: String?): Long? {
+        if (iso.isNullOrBlank()) return null
+        return try { isoFmt.parse(iso)?.time } catch (_: Exception) {
+            try { isoFmtMs.parse(iso)?.time } catch (_: Exception) { null }
+        }
+    }
+
     suspend fun fetchPriceHistory(conditionId: String): List<PricePoint> = try {
-        gammaApi.getPricesHistory(conditionId, interval = "1m", fidelity = 60)
+        gammaApi.getPricesHistory(conditionId, interval = "1w", fidelity = 60)
             .history
             .map { PricePoint(timestamp = it.timestamp * 1000L, yesPrice = it.price) }
     } catch (e: Exception) {

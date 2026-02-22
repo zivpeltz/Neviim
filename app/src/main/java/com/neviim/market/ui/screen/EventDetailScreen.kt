@@ -2,7 +2,6 @@ package com.neviim.market.ui.screen
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -11,6 +10,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,11 +23,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -36,9 +38,12 @@ import com.neviim.market.data.model.EventOption
 import com.neviim.market.data.model.EventType
 import com.neviim.market.data.model.PricePoint
 import com.neviim.market.data.model.TradeSide
-import com.neviim.market.ui.components.*
+import com.neviim.market.ui.components.formatPriceAsCents
+import com.neviim.market.ui.components.formatSP
 import com.neviim.market.ui.theme.*
 import com.neviim.market.ui.viewmodel.EventDetailViewModel
+import kotlin.math.cos
+import kotlin.math.sin
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,6 +62,7 @@ fun EventDetailScreen(
     val balance by viewModel.balance.collectAsState()
     val tradeMessage by viewModel.tradeMessage.collectAsState()
     val priceHistory by viewModel.priceHistory.collectAsState()
+    val isLoadingHistory by viewModel.isLoadingHistory.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -76,11 +82,7 @@ fun EventDetailScreen(
             return@Scaffold
         }
 
-        // Display tag: prefer the raw API label (e.g. "Soccer", "US Elections"),
-        // fall back to the enum's display name
-        val displayTag = currentEvent.tagLabel
-            .ifBlank { currentEvent.tag.displayName }
-            .uppercase()
+        val displayTag = currentEvent.tagLabel.ifBlank { currentEvent.tag.displayName }.uppercase()
 
         Column(
             modifier = Modifier
@@ -97,26 +99,20 @@ fun EventDetailScreen(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxWidth().height(200.dp)
                     )
-                    // Gradient fade
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp)
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(
-                                        MaterialTheme.colorScheme.background.copy(alpha = 0.15f),
-                                        MaterialTheme.colorScheme.background
-                                    )
+                        modifier = Modifier.fillMaxWidth().height(200.dp).background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    MaterialTheme.colorScheme.background.copy(alpha = 0.1f),
+                                    MaterialTheme.colorScheme.background
                                 )
                             )
+                        )
                     )
                 }
                 IconButton(
                     onClick = onBack,
-                    modifier = Modifier
-                        .padding(8.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                    modifier = Modifier.padding(8.dp).clip(RoundedCornerShape(12.dp))
                         .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
                 ) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onSurface)
@@ -130,11 +126,8 @@ fun EventDetailScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp)
             ) {
-                // Category badge — dynamic from API
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                ) {
+                // Category badge
+                Surface(shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)) {
                     Text(
                         text = displayTag,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
@@ -144,17 +137,8 @@ fun EventDetailScreen(
                         letterSpacing = 0.8.sp
                     )
                 }
-
                 Spacer(modifier = Modifier.height(10.dp))
-
-                Text(
-                    text = currentEvent.title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    lineHeight = 30.sp
-                )
-
+                Text(text = currentEvent.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground, lineHeight = 30.sp)
                 Spacer(modifier = Modifier.height(20.dp))
 
                 // ── Section 1: Current Odds ────────────────────────
@@ -170,28 +154,11 @@ fun EventDetailScreen(
                             fontWeight = FontWeight.ExtraBold,
                             color = YesColor
                         )
-                        Text(
-                            text = "chance",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 6.dp)
-                        )
+                        Text(text = "chance", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 6.dp))
                     }
                     Spacer(modifier = Modifier.height(8.dp))
-                    // Split bar
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(NoColor.copy(alpha = 0.25f))
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth(currentEvent.yesProbability.toFloat().coerceIn(0f, 1f))
-                                .fillMaxHeight()
-                                .background(Brush.horizontalGradient(listOf(YesColor, YesColor.copy(alpha = 0.75f))))
-                        )
+                    Box(modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(NoColor.copy(alpha = 0.25f))) {
+                        Box(modifier = Modifier.fillMaxWidth(currentEvent.yesProbability.toFloat().coerceIn(0f, 1f)).fillMaxHeight().background(Brush.horizontalGradient(listOf(YesColor, YesColor.copy(alpha = 0.75f)))))
                     }
                     Spacer(modifier = Modifier.height(6.dp))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -199,69 +166,139 @@ fun EventDetailScreen(
                         Text("No ${formatPriceAsCents(currentEvent.noProbability)}", style = MaterialTheme.typography.labelSmall, color = NoColor, fontWeight = FontWeight.SemiBold)
                     }
                 } else {
-                    // Multi-choice outcomes
-                    Text("Outcomes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+                    // ── Multi-choice: Dropdown selector ───────────────
+                    val sortedOptions = currentEvent.options
+                        .sortedByDescending { EventOption.probability(it, currentEvent.options) }
+                    val selectedOption = sortedOptions.find { it.id == selectedOptionId } ?: sortedOptions.firstOrNull()
+                    var expanded by remember { mutableStateOf(false) }
+
+                    Text("Select Outcome", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
                     Spacer(modifier = Modifier.height(8.dp))
-                    val sortedOptions = currentEvent.options.sortedByDescending { EventOption.probability(it, currentEvent.options) }
-                    sortedOptions.forEach { option ->
-                        val prob = EventOption.probability(option, currentEvent.options)
-                        val isSelected = selectedOptionId == option.id
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .border(
-                                    width = if (isSelected) 2.dp else 1.dp,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                                .clickable { viewModel.selectOption(option.id) },
-                            color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface,
-                            shape = RoundedCornerShape(12.dp)
+
+                    ExposedDropdownMenuBox(
+                        expanded = expanded,
+                        onExpandedChange = { expanded = !expanded }
+                    ) {
+                        OutlinedTextField(
+                            value = selectedOption?.let {
+                                "${it.label}  ·  ${formatPriceAsCents(EventOption.probability(it, currentEvent.options))}"
+                            } ?: "Choose an outcome",
+                            onValueChange = {},
+                            readOnly = true,
+                            modifier = Modifier.fillMaxWidth().menuAnchor(),
+                            textStyle = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
+                            trailingIcon = {
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            label = { Text("Outcome", style = MaterialTheme.typography.labelSmall) }
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
                         ) {
-                            Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Box(modifier = Modifier.weight(1f)) {
-                                    Column {
-                                        Text(option.label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface, maxLines = 2)
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        Box(
-                                            modifier = Modifier.fillMaxWidth().height(3.dp)
-                                                .clip(RoundedCornerShape(2.dp))
-                                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                            sortedOptions.forEach { option ->
+                                val prob = EventOption.probability(option, currentEvent.options)
+                                val isSelected = selectedOptionId == option.id
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .fillMaxWidth(prob.toFloat().coerceIn(0f, 1f))
-                                                    .fillMaxHeight()
-                                                    .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(0.4f))
+                                            Text(
+                                                text = option.label,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontSize = 12.sp,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                                modifier = Modifier.weight(1f),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = formatPriceAsCents(prob),
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                fontSize = 11.sp
                                             )
                                         }
-                                    }
-                                }
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Text(formatPriceAsCents(prob), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                                    },
+                                    onClick = {
+                                        viewModel.selectOption(option.id)
+                                        expanded = false
+                                    },
+                                    modifier = Modifier.background(
+                                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else Color.Transparent
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    // Show probability bar for selected option
+                    selectedOption?.let { opt ->
+                        val prob = EventOption.probability(opt, currentEvent.options)
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Box(modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
+                            Box(modifier = Modifier.fillMaxWidth(prob.toFloat().coerceIn(0f, 1f)).fillMaxHeight().background(Brush.horizontalGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primary.copy(0.7f)))))
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("${formatPriceAsCents(prob)} implied probability", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+
+                // ── Section 2: Price History Chart ─────────────────
+                // Always rendered — shows spinner while loading, chart when ready,
+                // and a subtle "no data" state if the API returned nothing.
+                Spacer(modifier = Modifier.height(24.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Price History", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+                    Text("7d", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 2.dp))
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    when {
+                        isLoadingHistory -> {
+                            CircularProgressIndicator(modifier = Modifier.size(32.dp), strokeWidth = 2.dp)
+                        }
+                        priceHistory.size >= 2 -> {
+                            val chartColor = if (priceHistory.last().yesPrice >= priceHistory.first().yesPrice) YesColor else NoColor
+                            PriceHistoryChart(
+                                points = priceHistory,
+                                lineColor = chartColor,
+                                modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 8.dp)
+                            )
+                        }
+                        else -> {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("📊", fontSize = 28.sp)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text("No chart data available", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
                 }
 
-                // ── Section 2: Price History Chart ─────────────────
                 if (priceHistory.size >= 2) {
-                    Spacer(modifier = Modifier.height(24.dp))
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Price History", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    PriceHistoryChart(
-                        points = priceHistory,
-                        lineColor = when {
-                            priceHistory.last().yesPrice >= priceHistory.first().yesPrice -> YesColor
-                            else -> NoColor
-                        },
-                        modifier = Modifier.fillMaxWidth().height(160.dp)
-                    )
-                    // Min / max labels
                     val minP = priceHistory.minOf { it.yesPrice }
                     val maxP = priceHistory.maxOf { it.yesPrice }
                     Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -289,7 +326,7 @@ fun EventDetailScreen(
                                 shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = if (isSel) color else color.copy(alpha = 0.12f),
-                                    contentColor = if (isSel) MaterialTheme.colorScheme.onPrimary else color
+                                    contentColor = if (isSel) Color.White else color
                                 )
                             ) {
                                 Text(if (side == TradeSide.YES) "Buy Yes" else "Buy No", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
@@ -376,7 +413,7 @@ fun EventDetailScreen(
                         shape = RoundedCornerShape(10.dp),
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
                         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
-                            .clickable { try { uriHandler.openUri(currentEvent.resolutionSource!!) } catch (_: Exception) {} }
+                            .clickable(onClick = { try { uriHandler.openUri(currentEvent.resolutionSource!!) } catch (_: Exception) {} })
                     ) {
                         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Icon(Icons.Default.OpenInNew, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
@@ -391,7 +428,7 @@ fun EventDetailScreen(
     }
 }
 
-// ── Price History Chart ────────────────────────────────────────────
+// ── Price History Chart (Canvas) ─────────────────────────────────────
 
 @Composable
 fun PriceHistoryChart(
@@ -399,57 +436,40 @@ fun PriceHistoryChart(
     lineColor: Color,
     modifier: Modifier = Modifier
 ) {
-    val fillColor = lineColor.copy(alpha = 0.12f)
-
+    val fillColor = lineColor.copy(alpha = 0.15f)
     Canvas(modifier = modifier) {
         if (points.size < 2) return@Canvas
-
         val minT = points.minOf { it.timestamp }.toFloat()
         val maxT = points.maxOf { it.timestamp }.toFloat()
-        val minP = points.minOf { it.yesPrice }.toFloat().coerceAtMost(0.9f)
-        val maxP = points.maxOf { it.yesPrice }.toFloat().coerceAtLeast(0.1f)
+        val minP = (points.minOf { it.yesPrice } - 0.02).coerceAtLeast(0.0).toFloat()
+        val maxP = (points.maxOf { it.yesPrice } + 0.02).coerceAtMost(1.0).toFloat()
         val rangeT = (maxT - minT).coerceAtLeast(1f)
         val rangeP = (maxP - minP).coerceAtLeast(0.01f)
-
-        val w = size.width
-        val h = size.height
+        val w = size.width; val h = size.height
 
         fun xOf(t: Long) = (t.toFloat() - minT) / rangeT * w
         fun yOf(p: Double) = h - ((p.toFloat() - minP) / rangeP * h).coerceIn(0f, h)
 
-        // Build line path
         val linePath = Path()
         points.forEachIndexed { i, pt ->
-            val x = xOf(pt.timestamp)
-            val y = yOf(pt.yesPrice)
+            val x = xOf(pt.timestamp); val y = yOf(pt.yesPrice)
             if (i == 0) linePath.moveTo(x, y) else linePath.lineTo(x, y)
         }
-
-        // Fill path (closed)
         val fillPath = Path().also { it.addPath(linePath) }
         fillPath.lineTo(xOf(points.last().timestamp), h)
         fillPath.lineTo(xOf(points.first().timestamp), h)
         fillPath.close()
 
-        // Draw fill
         drawPath(fillPath, brush = Brush.verticalGradient(listOf(fillColor, Color.Transparent)))
+        drawPath(linePath, color = lineColor, style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
 
-        // Draw line
-        drawPath(
-            linePath,
-            color = lineColor,
-            style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
-        )
-
-        // Draw last price dot
-        val lastX = xOf(points.last().timestamp)
-        val lastY = yOf(points.last().yesPrice)
+        val lastX = xOf(points.last().timestamp); val lastY = yOf(points.last().yesPrice)
         drawCircle(color = lineColor, radius = 5.dp.toPx(), center = Offset(lastX, lastY))
         drawCircle(color = Color.White, radius = 3.dp.toPx(), center = Offset(lastX, lastY))
     }
 }
 
-// ── Helper components ──────────────────────────────────────────────
+// ── Helper composables ────────────────────────────────────────────────
 
 @Composable
 private fun StatItem(label: String, value: String, modifier: Modifier = Modifier) {

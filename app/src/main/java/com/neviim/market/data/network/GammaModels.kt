@@ -13,6 +13,7 @@ data class GammaEvent(
     val closed: Boolean = false,
     val volume: Double = 0.0,
     val endDateIso: String? = null,
+    val startDateIso: String? = null,
     val markets: List<GammaMarket> = emptyList(),
     val tags: List<GammaTag> = emptyList()
 )
@@ -26,6 +27,7 @@ data class GammaMarket(
     val volumeNum: Double = 0.0,
     val liquidityNum: Double = 0.0,
     val conditionId: String? = null,
+    val endDateIso: String? = null,
     // Note: Polymarket API often returns outcomes and outcomePrices as JSON string arrays.
     // e.g. "[\"Yes\", \"No\"]"
     val outcomes: String? = null,

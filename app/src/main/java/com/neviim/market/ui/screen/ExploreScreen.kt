@@ -25,13 +25,12 @@ import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
 import com.neviim.market.data.model.Event
 import com.neviim.market.data.model.EventOption
-import com.neviim.market.data.model.EventTag
 import com.neviim.market.data.model.EventType
-import com.neviim.market.data.repository.SettingsRepository
 import com.neviim.market.ui.components.formatPriceAsCents
 import com.neviim.market.ui.components.formatSP
 import com.neviim.market.ui.theme.*
 import com.neviim.market.ui.viewmodel.ExploreViewModel
+import com.neviim.market.ui.viewmodel.SortMode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,9 +41,9 @@ fun ExploreScreen(
     val events by viewModel.filteredEvents.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedTag by viewModel.selectedTag.collectAsState()
+    val availableTags by viewModel.availableTags.collectAsState()
     val lastRefreshed by viewModel.lastRefreshed.collectAsState()
-    val themeMode by SettingsRepository.themeMode.collectAsState()
-    val isJewishTheme = themeMode == SettingsRepository.ThemeMode.JEWISH
+    val sortMode by viewModel.sortMode.collectAsState()
 
     // Tick every second so the "Updated X ago" label stays accurate
     var now by remember { mutableStateOf(System.currentTimeMillis()) }
@@ -59,26 +58,15 @@ fun ExploreScreen(
         else -> "Updated ${(now - lastRefreshed) / 60_000}m ago"
     }
 
-    val categories = listOf(
-        null to "All",
-        EventTag.POLITICS to "Politics",
-        EventTag.CRYPTO to "Crypto",
-        EventTag.SPORTS to "Sports",
-        EventTag.POP_CULTURE to "Pop Culture",
-        EventTag.SCIENCE to "Science"
-    )
-
+    JewishThemedBackground(
+        modifier = Modifier.fillMaxSize()
+    ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Decorative Stars of David background (Jewish theme only)
-        if (isJewishTheme) {
-            StarOfDavidPattern(
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
-            )
-        }
+
         // ── Top Bar ───────────────────────────────────────────────
         Surface(
             modifier = Modifier.fillMaxWidth(),
@@ -131,17 +119,67 @@ fun ExploreScreen(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Category chips
+                // ── Dynamic category chips ─────────────────────────
+                // Only shows tags that have ≥1 event — never empty chips.
+                if (availableTags.isNotEmpty()) {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // "All" chip
+                        item {
+                            val isAll = selectedTag == null
+                            FilterChip(
+                                selected = isAll,
+                                onClick = { viewModel.selectTag(null) },
+                                label = { Text("All", fontWeight = if (isAll) FontWeight.Bold else FontWeight.Normal, fontSize = 12.sp) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                )
+                            )
+                        }
+                        items(availableTags) { tag ->
+                            val isSelected = selectedTag == tag
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { viewModel.selectTag(tag) },
+                                label = {
+                                    Text(
+                                        text = tag,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        fontSize = 12.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                )
+                            )
+                        }
+                    }
+                }
+
+                // ── Sort row ───────────────────────────────────────
+                Spacer(modifier = Modifier.height(8.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(categories) { (tag, label) ->
-                        val selected = selectedTag == tag
+                    items(SortMode.entries) { mode ->
+                        val isSelected = sortMode == mode
                         FilterChip(
-                            selected = selected,
-                            onClick = { viewModel.selectTag(tag) },
-                            label = { Text(label, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal) },
+                            selected = isSelected,
+                            onClick = { viewModel.selectSort(mode) },
+                            leadingIcon = {
+                                Text(mode.emoji, fontSize = 13.sp)
+                            },
+                            label = {
+                                Text(
+                                    text = mode.label,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                )
+                            },
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                selectedContainerColor = MaterialTheme.colorScheme.secondary,
+                                selectedLabelColor = MaterialTheme.colorScheme.onSecondary
                             )
                         )
                     }
@@ -150,19 +188,27 @@ fun ExploreScreen(
         }
 
         // ── Event Feed ─────────────────────────────────────────────
-        LazyColumn(
-            contentPadding = PaddingValues(vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(0.dp)
-        ) {
-            items(events, key = { it.id }) { event ->
-                EventFeedCard(event = event, onClick = { onEventClick(event.id) })
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
-                    thickness = 1.dp
-                )
+        if (events.isEmpty() && lastRefreshed == 0L) {
+            // First load — show spinner
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else {
+            LazyColumn(
+                contentPadding = PaddingValues(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(0.dp)
+            ) {
+                items(events, key = { it.id }) { event ->
+                    EventFeedCard(event = event, onClick = { onEventClick(event.id) })
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
+                        thickness = 1.dp
+                    )
+                }
             }
         }
-    }
+    } // Column
+    } // JewishThemedBackground
 }
 
 @Composable
@@ -180,7 +226,6 @@ private fun EventFeedCard(event: Event, onClick: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.Top
         ) {
-            // Event image
             if (event.image != null) {
                 AsyncImage(
                     model = event.image,
@@ -192,7 +237,6 @@ private fun EventFeedCard(event: Event, onClick: () -> Unit) {
                 )
             }
 
-            // Title + category
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = event.title,
@@ -205,7 +249,7 @@ private fun EventFeedCard(event: Event, onClick: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = (event.tagLabel.ifBlank { event.tag.displayName }).uppercase(),
+                    text = event.tagLabel.ifBlank { event.tag.displayName }.uppercase(),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.Medium,
@@ -216,15 +260,13 @@ private fun EventFeedCard(event: Event, onClick: () -> Unit) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Odds display — Polymarket style
+        // Odds display
         if (event.eventType == EventType.BINARY) {
-            // Single probability row: big YES price + buy buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Probability bar underneath
                 Column(modifier = Modifier.weight(1f)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -237,110 +279,54 @@ private fun EventFeedCard(event: Event, onClick: () -> Unit) {
                             fontWeight = FontWeight.ExtraBold,
                             color = YesColor
                         )
-                        Text(
-                            text = "chance",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Text(text = "chance", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Spacer(modifier = Modifier.height(6.dp))
-                    // Split bar
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(4.dp)
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(NoColor.copy(alpha = 0.25f))
+                        modifier = Modifier.fillMaxWidth().height(4.dp)
+                            .clip(RoundedCornerShape(2.dp)).background(NoColor.copy(alpha = 0.25f))
                     ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth(event.yesProbability.toFloat().coerceIn(0f, 1f))
                                 .fillMaxHeight()
-                                .background(
-                                    Brush.horizontalGradient(listOf(YesColor, YesColor.copy(alpha = 0.7f)))
-                                )
+                                .background(Brush.horizontalGradient(listOf(YesColor, YesColor.copy(alpha = 0.7f))))
                         )
                     }
                 }
-
-                // Yes/No pill buttons
                 FeedBuyButton("Yes", formatPriceAsCents(event.yesProbability), YesColor)
                 FeedBuyButton("No", formatPriceAsCents(event.noProbability), NoColor)
             }
         } else {
-            // Multi-choice: show top options with bars
             val sorted = event.options.sortedByDescending { EventOption.probability(it, event.options) }
             sorted.take(3).forEach { option ->
                 val p = EventOption.probability(option, event.options)
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 3.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        text = option.label,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    // Mini bar
-                    Box(
-                        modifier = Modifier
-                            .width(60.dp)
-                            .height(4.dp)
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth(p.toFloat().coerceIn(0f, 1f))
-                                .fillMaxHeight()
-                                .background(MaterialTheme.colorScheme.primary)
-                        )
+                    Text(option.label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Box(modifier = Modifier.width(60.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
+                        Box(modifier = Modifier.fillMaxWidth(p.toFloat().coerceIn(0f, 1f)).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
                     }
-                    Text(
-                        text = formatPriceAsCents(p),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    Text(formatPriceAsCents(p), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 }
             }
             if (sorted.size > 3) {
-                Text(
-                    text = "+${sorted.size - 3} more",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
+                Text("+${sorted.size - 3} more", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
             }
         }
 
-        // Footer: volume
         Spacer(modifier = Modifier.height(10.dp))
-        Text(
-            text = "${formatSP(event.totalVolume)} Vol.",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Text("${formatSP(event.totalVolume)} Vol.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
 @Composable
 private fun FeedBuyButton(label: String, price: String, color: androidx.compose.ui.graphics.Color) {
-    Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = color.copy(alpha = 0.1f),
-        modifier = Modifier.width(72.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+    Surface(shape = RoundedCornerShape(8.dp), color = color.copy(alpha = 0.1f), modifier = Modifier.width(72.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(text = label, style = MaterialTheme.typography.labelSmall, color = color, fontWeight = FontWeight.SemiBold)
             Text(text = price, style = MaterialTheme.typography.labelLarge, color = color, fontWeight = FontWeight.ExtraBold)
         }

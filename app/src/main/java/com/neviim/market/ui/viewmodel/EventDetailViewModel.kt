@@ -21,6 +21,20 @@ class EventDetailViewModel : ViewModel() {
         if (id != null) events.find { it.id == id } else null
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    init {
+        // Re-fetch price history whenever the event changes and we don't have data yet.
+        viewModelScope.launch {
+            event.collect { evt ->
+                if (evt != null && _priceHistory.value.isEmpty()) {
+                    val cid = evt.conditionId ?: return@collect
+                    _isLoadingHistory.value = true
+                    _priceHistory.value = MarketRepository.fetchPriceHistory(cid)
+                    _isLoadingHistory.value = false
+                }
+            }
+        }
+    }
+
     // Binary trade side
     private val _selectedSide = MutableStateFlow(TradeSide.YES)
     val selectedSide: StateFlow<TradeSide> = _selectedSide.asStateFlow()
@@ -38,6 +52,9 @@ class EventDetailViewModel : ViewModel() {
     // Price history for chart
     private val _priceHistory = MutableStateFlow<List<PricePoint>>(emptyList())
     val priceHistory: StateFlow<List<PricePoint>> = _priceHistory.asStateFlow()
+
+    private val _isLoadingHistory = MutableStateFlow(false)
+    val isLoadingHistory: StateFlow<Boolean> = _isLoadingHistory.asStateFlow()
 
     val balance: StateFlow<Double> = MarketRepository.userProfile
         .map { it.balance }
