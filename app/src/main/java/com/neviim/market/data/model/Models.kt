@@ -19,6 +19,8 @@ data class Event(
     val description: String = "",
     val descriptionHe: String = "",
     val tag: EventTag,
+    val tagLabel: String = "",          // raw label from Polymarket API e.g. "Politics", "Soccer"
+    val conditionId: String? = null,    // CLOB condition ID for fetching price history
     val eventType: EventType = EventType.BINARY,
     val options: List<EventOption> = emptyList(),
     val totalVolume: Double = 0.0,

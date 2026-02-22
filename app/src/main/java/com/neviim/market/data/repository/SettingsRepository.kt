@@ -15,7 +15,7 @@ object SettingsRepository {
     private const val PREFS_NAME = "neviim_settings"
     private const val KEY_THEME_MODE = "theme_mode"
 
-    enum class ThemeMode { SYSTEM, LIGHT, DARK }
+    enum class ThemeMode { SYSTEM, LIGHT, DARK, JEWISH }
 
     private val _themeMode = MutableStateFlow(ThemeMode.SYSTEM)
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()

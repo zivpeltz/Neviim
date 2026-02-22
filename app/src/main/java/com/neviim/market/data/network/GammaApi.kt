@@ -1,5 +1,7 @@
 package com.neviim.market.data.network
 
+import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import retrofit2.Retrofit
@@ -31,6 +33,19 @@ interface GammaApi {
         @Path("id") marketId: String
     ): GammaMarket
 
+    /**
+     * Fetches price history for a market.
+     * @param marketId  the market's conditionId (CLOB id)
+     * @param interval  e.g. "1d", "1w", "1m", "all"
+     * @param fidelity  data point granularity in minutes (60 = hourly)
+     */
+    @GET("prices-history")
+    suspend fun getPricesHistory(
+        @Query("market") marketId: String,
+        @Query("interval") interval: String = "1w",
+        @Query("fidelity") fidelity: Int = 60
+    ): GammaHistoryResponse
+
     companion object {
         private const val BASE_URL = "https://gamma-api.polymarket.com/"
 
@@ -48,3 +63,14 @@ interface GammaApi {
         }
     }
 }
+
+@JsonClass(generateAdapter = true)
+data class GammaHistoryResponse(
+    val history: List<GammaHistoryPoint> = emptyList()
+)
+
+@JsonClass(generateAdapter = true)
+data class GammaHistoryPoint(
+    @Json(name = "t") val timestamp: Long = 0L,    // unix seconds
+    @Json(name = "p") val price: Double = 0.0       // probability 0-1
+)

@@ -25,6 +25,7 @@ data class GammaMarket(
     val closed: Boolean = false,
     val volumeNum: Double = 0.0,
     val liquidityNum: Double = 0.0,
+    val conditionId: String? = null,
     // Note: Polymarket API often returns outcomes and outcomePrices as JSON string arrays.
     // e.g. "[\"Yes\", \"No\"]"
     val outcomes: String? = null,

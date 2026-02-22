@@ -7,6 +7,7 @@ import com.neviim.market.data.network.GammaApi
 import com.neviim.market.data.storage.UserDataStorage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,6 +29,12 @@ object MarketRepository {
     private val _userProfile = MutableStateFlow(UserProfile())
     val userProfile: StateFlow<UserProfile> = _userProfile.asStateFlow()
 
+    /** Epoch millis of the last successful events fetch, 0 if never. */
+    private val _lastRefreshed = MutableStateFlow(0L)
+    val lastRefreshed: StateFlow<Long> = _lastRefreshed.asStateFlow()
+
+    private const val REFRESH_INTERVAL_MS = 30_000L  // 30 seconds
+
     fun init(context: Context) {
         appContext = context.applicationContext
         val loaded = UserDataStorage.load(appContext)
@@ -36,12 +43,31 @@ object MarketRepository {
             _positions.value = loaded.second
         }
         refreshEvents()
+        startAutoRefresh()
+    }
+
+    /** Kicks off a coroutine that re-fetches market data every 30 seconds. */
+    private fun startAutoRefresh() {
+        scope.launch {
+            while (true) {
+                delay(REFRESH_INTERVAL_MS)
+                refreshEvents()
+            }
+        }
     }
 
     private fun persistUserData() {
         if (::appContext.isInitialized) {
             UserDataStorage.save(appContext, _userProfile.value, _positions.value)
         }
+    }
+
+    /** Re-reads the user profile from disk. Called after onboarding saves a new name. */
+    fun reloadProfile() {
+        if (!::appContext.isInitialized) return
+        val loaded = UserDataStorage.load(appContext) ?: return
+        _userProfile.value = loaded.first
+        _positions.value = loaded.second
     }
 
     fun refreshEvents() {
@@ -69,6 +95,7 @@ object MarketRepository {
                     }
                     if (validMarkets.isEmpty()) continue
 
+                    val firstTag = ge.tags.firstOrNull()?.label ?: ""
                     val tag = when {
                         ge.tags.any { it.label.equals("Politics", true) } -> EventTag.POLITICS
                         ge.tags.any { it.label.equals("Crypto", true) } -> EventTag.CRYPTO
@@ -107,6 +134,8 @@ object MarketRepository {
                                     titleHe = ge.title,
                                     description = ge.description ?: "",
                                     tag = tag,
+                                    tagLabel = firstTag,
+                                    conditionId = validMarkets.first().conditionId,
                                     eventType = EventType.MULTI_CHOICE,
                                     options = options,
                                     totalVolume = validMarkets.sumOf { it.volumeNum },
@@ -127,6 +156,7 @@ object MarketRepository {
                     }
                 }
                 _events.value = mapped
+                _lastRefreshed.value = System.currentTimeMillis()
                 Log.d("MarketRepository", "Loaded ${mapped.size} events from ${gammaEvents.size} Polymarket events")
             } catch (e: Exception) {
                 Log.e("MarketRepository", "Failed to fetch events", e)
@@ -163,6 +193,8 @@ object MarketRepository {
                 titleHe = gm.question.ifBlank { ge.title },
                 description = ge.description ?: "",
                 tag = tag,
+                tagLabel = ge.tags.firstOrNull()?.label ?: "",
+                conditionId = gm.conditionId,
                 eventType = type,
                 options = options,
                 totalVolume = gm.volumeNum,
@@ -174,6 +206,15 @@ object MarketRepository {
     }
 
     fun getEvent(eventId: String): Event? = _events.value.find { it.id == eventId }
+
+    suspend fun fetchPriceHistory(conditionId: String): List<PricePoint> = try {
+        gammaApi.getPricesHistory(conditionId, interval = "1m", fidelity = 60)
+            .history
+            .map { PricePoint(timestamp = it.timestamp * 1000L, yesPrice = it.price) }
+    } catch (e: Exception) {
+        Log.w("MarketRepository", "Price history fetch failed for $conditionId", e)
+        emptyList()
+    }
 
     fun estimateReturn(event: Event, side: TradeSide, amount: Double): Double {
         val price = getCurrentPrice(event.id, side)

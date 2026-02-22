@@ -30,11 +30,20 @@ class ExploreViewModel : ViewModel() {
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    /** Epoch millis of last successful fetch — 0 means never loaded yet. */
+    val lastRefreshed: StateFlow<Long> = MarketRepository.lastRefreshed
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
+
     fun updateSearch(query: String) {
         _searchQuery.value = query
     }
 
     fun selectTag(tag: EventTag?) {
         _selectedTag.value = if (_selectedTag.value == tag) null else tag
+    }
+
+    /** Manually trigger an immediate refresh (e.g. pull-to-refresh). */
+    fun refresh() {
+        viewModelScope.launch { MarketRepository.refreshEvents() }
     }
 }

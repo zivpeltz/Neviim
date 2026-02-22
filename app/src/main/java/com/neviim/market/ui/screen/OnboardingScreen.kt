@@ -21,7 +21,10 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.neviim.market.data.repository.MarketRepository
+import com.neviim.market.data.repository.SettingsRepository
 import com.neviim.market.data.storage.UserDataStorage
+import com.neviim.market.ui.theme.StarOfDavidPattern
 import com.neviim.market.ui.theme.YesColor
 import kotlinx.coroutines.delay
 
@@ -41,6 +44,8 @@ fun OnboardingScreen(
         visible = true
     }
 
+    val themeMode by SettingsRepository.themeMode.collectAsState()
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -54,6 +59,10 @@ fun OnboardingScreen(
             ),
         contentAlignment = Alignment.Center
     ) {
+        // Stars of David background for Jewish theme
+        if (themeMode == SettingsRepository.ThemeMode.JEWISH) {
+            StarOfDavidPattern(color = MaterialTheme.colorScheme.primary.copy(alpha = 0.07f))
+        }
         AnimatedVisibility(
             visible = visible,
             enter = fadeIn() + slideInVertically(initialOffsetY = { it / 4 })
@@ -138,6 +147,7 @@ fun OnboardingScreen(
                             keyboardController?.hide()
                             if (nameInput.isNotBlank()) {
                                 UserDataStorage.saveOnboardingComplete(context, nameInput)
+                                MarketRepository.reloadProfile()
                                 onComplete()
                             }
                         }
@@ -149,6 +159,7 @@ fun OnboardingScreen(
                     onClick = {
                         keyboardController?.hide()
                         UserDataStorage.saveOnboardingComplete(context, nameInput)
+                        MarketRepository.reloadProfile()
                         onComplete()
                     },
                     modifier = Modifier

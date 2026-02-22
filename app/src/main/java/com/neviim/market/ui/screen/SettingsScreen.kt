@@ -87,8 +87,9 @@ fun SettingsScreen(
                             Text(
                                 text = when (mode) {
                                     SettingsRepository.ThemeMode.SYSTEM -> stringResource(R.string.theme_system)
-                                    SettingsRepository.ThemeMode.LIGHT -> stringResource(R.string.theme_light)
-                                    SettingsRepository.ThemeMode.DARK -> stringResource(R.string.theme_dark)
+                                    SettingsRepository.ThemeMode.LIGHT  -> stringResource(R.string.theme_light)
+                                    SettingsRepository.ThemeMode.DARK   -> stringResource(R.string.theme_dark)
+                                    SettingsRepository.ThemeMode.JEWISH -> "✡️ Jewish"
                                 },
                                 style = MaterialTheme.typography.bodyLarge
                             )
@@ -195,8 +196,9 @@ fun SettingsScreen(
                 title = stringResource(R.string.settings_theme),
                 subtitle = when (themeMode) {
                     SettingsRepository.ThemeMode.SYSTEM -> stringResource(R.string.theme_system)
-                    SettingsRepository.ThemeMode.LIGHT -> stringResource(R.string.theme_light)
-                    SettingsRepository.ThemeMode.DARK -> stringResource(R.string.theme_dark)
+                    SettingsRepository.ThemeMode.LIGHT  -> stringResource(R.string.theme_light)
+                    SettingsRepository.ThemeMode.DARK   -> stringResource(R.string.theme_dark)
+                    SettingsRepository.ThemeMode.JEWISH -> "✡️ Jewish"
                 },
                 onClick = { showThemeDialog = true }
             )

@@ -3,8 +3,8 @@ package com.neviim.market.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.neviim.market.data.model.Event
-import com.neviim.market.data.model.EventOption
 import com.neviim.market.data.model.EventType
+import com.neviim.market.data.model.PricePoint
 import com.neviim.market.data.model.TradeSide
 import com.neviim.market.data.repository.MarketRepository
 import kotlinx.coroutines.flow.*
@@ -35,6 +35,10 @@ class EventDetailViewModel : ViewModel() {
     private val _tradeMessage = MutableStateFlow<String?>(null)
     val tradeMessage: StateFlow<String?> = _tradeMessage.asStateFlow()
 
+    // Price history for chart
+    private val _priceHistory = MutableStateFlow<List<PricePoint>>(emptyList())
+    val priceHistory: StateFlow<List<PricePoint>> = _priceHistory.asStateFlow()
+
     val balance: StateFlow<Double> = MarketRepository.userProfile
         .map { it.balance }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
@@ -63,6 +67,13 @@ class EventDetailViewModel : ViewModel() {
         val evt = MarketRepository.getEvent(eventId)
         if (evt?.eventType == EventType.MULTI_CHOICE && evt.options.isNotEmpty()) {
             _selectedOptionId.value = evt.options.first().id
+        }
+        // Fetch price history when conditionId is available
+        val cid = evt?.conditionId
+        if (cid != null) {
+            viewModelScope.launch {
+                _priceHistory.value = MarketRepository.fetchPriceHistory(cid)
+            }
         }
     }
 
