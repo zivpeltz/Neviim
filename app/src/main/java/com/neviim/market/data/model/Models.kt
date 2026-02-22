@@ -142,7 +142,7 @@ enum class TradeSide { YES, NO }
  */
 data class UserProfile(
     val username: String = "Prophet",
-    val balance: Double = 5000.0,
+    val balance: Double = 100_000.0,
     val totalWinnings: Double = 0.0,
     val totalBets: Int = 0,
     val wonBets: Int = 0

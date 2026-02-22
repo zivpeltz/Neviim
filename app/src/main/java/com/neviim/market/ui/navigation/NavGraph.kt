@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -21,10 +22,12 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
 import com.neviim.market.R
+import com.neviim.market.data.storage.UserDataStorage
 import com.neviim.market.ui.screen.*
 
 // ── Route constants ─────────────────────────────────────────────────
 object Routes {
+    const val ONBOARDING = "onboarding"
     const val EXPLORE = "explore"
     const val EVENT_DETAIL = "event_detail/{eventId}"
     const val CREATE_EVENT = "create_event"
@@ -72,7 +75,7 @@ fun NeviimNavHost() {
             val navBackStackEntry by navController.currentBackStackEntryAsState()
             val currentDestination = navBackStackEntry?.destination
 
-            // Hide bottom bar on detail screens
+            // Hide bottom bar on detail/onboarding screens
             val showBottomBar = bottomNavItems.any { item ->
                 currentDestination?.hierarchy?.any { it.route == item.route } == true
             }
@@ -121,11 +124,24 @@ fun NeviimNavHost() {
             }
         }
     ) { innerPadding ->
+        val context = LocalContext.current
+        val hasOnboarded = remember { UserDataStorage.loadOnboardingState(context) }
+
         NavHost(
             navController = navController,
-            startDestination = Routes.EXPLORE,
+            startDestination = if (hasOnboarded) Routes.EXPLORE else Routes.ONBOARDING,
             modifier = Modifier.padding(innerPadding)
         ) {
+            composable(Routes.ONBOARDING) {
+                OnboardingScreen(
+                    onComplete = {
+                        navController.navigate(Routes.EXPLORE) {
+                            popUpTo(Routes.ONBOARDING) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
             composable(Routes.EXPLORE) {
                 ExploreScreen(
                     onEventClick = { eventId ->

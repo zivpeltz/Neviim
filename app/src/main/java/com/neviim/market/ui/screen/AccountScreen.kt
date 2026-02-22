@@ -8,7 +8,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -32,20 +31,8 @@ fun AccountScreen(
     viewModel: AccountViewModel = viewModel()
 ) {
     val profile by viewModel.userProfile.collectAsState()
-    val refillMessage by viewModel.refillMessage.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    val refilledMsg = stringResource(R.string.balance_refilled)
-
-    LaunchedEffect(refillMessage) {
-        refillMessage?.let {
-            snackbarHostState.showSnackbar(refilledMsg)
-            viewModel.clearMessage()
-        }
-    }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -190,34 +177,6 @@ fun AccountScreen(
                     value = formatSP(profile.totalWinnings),
                     modifier = Modifier.weight(1f),
                     valueColor = if (profile.totalWinnings >= 0) GreenProfit else RedLoss
-                )
-            }
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            // ── Refill Button ────────────────────────────────────
-            Button(
-                onClick = { viewModel.refillBalance() },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.secondary
-                )
-            ) {
-                Icon(
-                    Icons.Default.AddCircle,
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.refill_balance),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSecondary
                 )
             }
 

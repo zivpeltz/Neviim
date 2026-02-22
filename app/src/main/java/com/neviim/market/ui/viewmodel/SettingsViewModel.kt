@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.neviim.market.data.repository.MarketRepository
 import com.neviim.market.data.repository.SettingsRepository
 import com.neviim.market.data.updater.AppUpdater
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,6 +19,18 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     private val _updateStatus = MutableStateFlow<UpdateStatus>(UpdateStatus.Idle)
     val updateStatus: StateFlow<UpdateStatus> = _updateStatus.asStateFlow()
+
+    private val _devRefillMessage = MutableStateFlow<String?>(null)
+    val devRefillMessage: StateFlow<String?> = _devRefillMessage.asStateFlow()
+
+    fun refillBalance(amount: Double) {
+        MarketRepository.refillBalance(amount)
+        _devRefillMessage.value = "+${amount.toInt()} SP added to your balance!"
+    }
+
+    fun clearDevRefillMessage() {
+        _devRefillMessage.value = null
+    }
 
     val appVersion: String = try {
         val pInfo = application.packageManager.getPackageInfo(application.packageName, 0)

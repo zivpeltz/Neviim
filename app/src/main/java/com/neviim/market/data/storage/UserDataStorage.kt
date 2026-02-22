@@ -11,6 +11,48 @@ import java.io.File
 object UserDataStorage {
     private const val FILE_NAME = "user_data.json"
 
+    // ── Onboarding ────────────────────────────────────────────────────
+
+    /** Returns true if the user has already completed onboarding. */
+    fun loadOnboardingState(context: Context): Boolean {
+        val file = File(context.filesDir, FILE_NAME)
+        if (!file.exists()) return false
+        return try {
+            JSONObject(file.readText()).optBoolean("hasOnboarded", false)
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Saves the chosen display name and marks onboarding as complete.
+     * Creates a fresh profile with 100k SP if one doesn't already exist.
+     */
+    fun saveOnboardingComplete(context: Context, displayName: String) {
+        val file = File(context.filesDir, FILE_NAME)
+        val root = if (file.exists()) {
+            try { JSONObject(file.readText()) } catch (e: Exception) { JSONObject() }
+        } else {
+            JSONObject()
+        }
+
+        // Create fresh profile
+        val jsonProfile = JSONObject().apply {
+            put("username", displayName.trim())
+            put("balance", 100_000.0)
+            put("totalWinnings", 0.0)
+            put("totalBets", 0)
+            put("wonBets", 0)
+        }
+        root.put("profile", jsonProfile)
+        root.put("hasOnboarded", true)
+        if (!root.has("positions")) root.put("positions", JSONArray())
+
+        file.writeText(root.toString())
+    }
+
+    // ── Full save / load ─────────────────────────────────────────────
+
     fun save(context: Context, profile: UserProfile, positions: List<UserPosition>) {
         val root = JSONObject()
 
@@ -22,6 +64,7 @@ object UserDataStorage {
             put("wonBets", profile.wonBets)
         }
         root.put("profile", jsonProfile)
+        root.put("hasOnboarded", true)
 
         val jsonPositions = JSONArray()
         positions.forEach { pos ->
@@ -51,11 +94,11 @@ object UserDataStorage {
         return try {
             val text = file.readText()
             val root = JSONObject(text)
-            
+
             val jp = root.getJSONObject("profile")
             val profile = UserProfile(
                 username = jp.optString("username", "Prophet"),
-                balance = jp.optDouble("balance", 5000.0),
+                balance = jp.optDouble("balance", 100_000.0),
                 totalWinnings = jp.optDouble("totalWinnings", 0.0),
                 totalBets = jp.optInt("totalBets", 0),
                 wonBets = jp.optInt("wonBets", 0)

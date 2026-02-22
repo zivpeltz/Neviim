@@ -3,12 +3,14 @@ package com.neviim.market.ui.screen
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -22,6 +24,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -42,6 +45,17 @@ fun SettingsScreen(
 
     var showThemeDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
+    var showDevRefill by remember { mutableStateOf(false) }
+    var devRefillInput by remember { mutableStateOf("") }
+    val devRefillMessage by viewModel.devRefillMessage.collectAsState()
+    val devSnackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(devRefillMessage) {
+        devRefillMessage?.let {
+            devSnackbarHostState.showSnackbar(it)
+            viewModel.clearDevRefillMessage()
+        }
+    }
 
     // ── Theme Dialog ──────────────────────────────────────────────
     if (showThemeDialog) {
@@ -141,6 +155,7 @@ fun SettingsScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(devSnackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -276,6 +291,104 @@ fun SettingsScreen(
                         text = stringResource(R.string.update_view_release),
                         fontWeight = FontWeight.Bold
                     )
+                }
+            }
+
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+            )
+
+            // ── Developer Section ───────────────────────────────────
+            SettingsSectionHeader("Developer")
+
+            // Expandable row for adding SP
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { showDevRefill = !showDevRefill },
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                Column(modifier = Modifier.animateContentSize()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                                Icon(
+                                    Icons.Default.AddCircle,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(22.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Add ShekelPoints",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Dev only — add SP to your balance",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Icon(
+                            if (showDevRefill) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                    }
+
+                    AnimatedVisibility(visible = showDevRefill) {
+                        Column(
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .padding(bottom = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = devRefillInput,
+                                onValueChange = { devRefillInput = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text("Amount to add") },
+                                placeholder = { Text("e.g. 50000") },
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                            )
+                            Button(
+                                onClick = {
+                                    val amount = devRefillInput.toDoubleOrNull()
+                                    if (amount != null && amount > 0) {
+                                        viewModel.refillBalance(amount)
+                                        devRefillInput = ""
+                                        showDevRefill = false
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                enabled = (devRefillInput.toDoubleOrNull() ?: 0.0) > 0
+                            ) {
+                                Text("Add SP", fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
                 }
             }
 
