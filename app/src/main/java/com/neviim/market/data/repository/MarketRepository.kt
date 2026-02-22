@@ -158,6 +158,8 @@ object MarketRepository {
                 _events.value = mapped
                 _lastRefreshed.value = System.currentTimeMillis()
                 Log.d("MarketRepository", "Loaded ${mapped.size} events from ${gammaEvents.size} Polymarket events")
+                // Check if any open positions can now be resolved based on fresh data
+                resolvePositions()
             } catch (e: Exception) {
                 Log.e("MarketRepository", "Failed to fetch events", e)
             }
@@ -242,8 +244,13 @@ object MarketRepository {
         val shares = amount / price
         val option = if (side == TradeSide.YES) event.options.firstOrNull() else event.options.getOrNull(1)
 
+        // For binary events, the market ID IS the event ID.
+        // The option ID is like "<marketId>_0" or "<marketId>_1".
+        val marketId = option?.id?.substringBeforeLast("_") ?: eventId
+
         val position = UserPosition(
             eventId = eventId,
+            marketId = marketId,
             eventTitle = event.title,
             eventTitleHe = event.titleHe,
             optionId = option?.id ?: "",
@@ -282,13 +289,15 @@ object MarketRepository {
 
         val shares = amount / price
 
+        // For multi-choice, the optionId IS the market ID (it's the GammaMarket.id)
         val position = UserPosition(
             eventId = eventId,
+            marketId = optionId,
             eventTitle = event.title,
             eventTitleHe = event.titleHe,
             optionId = optionId,
             optionLabel = option.label,
-            side = TradeSide.YES, // Treating multi-choice buys as a YES on that specific candidate
+            side = TradeSide.YES,
             shares = shares,
             entryPrice = price,
             amountPaid = amount
@@ -309,6 +318,96 @@ object MarketRepository {
     fun refillBalance(amount: Double = 1000.0) {
         _userProfile.update { it.copy(balance = it.balance + amount) }
         persistUserData()
+    }
+
+    /**
+     * Scans all open positions against the current in-memory event list.
+     * Called automatically after every refreshEvents(). No extra network
+     * calls — we already have fresh closed/isResolved state from the fetch.
+     *
+     * Resolution logic:
+     *  - For BINARY: the position's side (YES/NO) matches the winning option.
+     *  - For MULTI_CHOICE: the position's marketId matches a closed market
+     *    whose winning outcome price is >= 0.95 (Polymarket convention).
+     * Winning positions receive a 1:1 payout (shares × 1.0 SP).
+     */
+    fun resolvePositions() {
+        val events = _events.value
+        val openPositions = _positions.value
+        if (openPositions.isEmpty()) return
+
+        var changed = false
+        val remaining = mutableListOf<UserPosition>()
+        var balanceDelta = 0.0
+        var winDelta = 0
+        var winningsDelta = 0.0
+
+        for (pos in openPositions) {
+            // Find the resolved event that matches this position
+            val event = events.find { it.id == pos.eventId }
+
+            if (event == null || !event.isResolved) {
+                // Also check if the specific market option is resolved (multi-choice case)
+                // We look for an option whose id == pos.marketId with price ~1.0
+                val resolvedOption = event?.options?.find { opt ->
+                    opt.id == pos.marketId &&
+                    EventOption.probability(opt, event.options) >= 0.95
+                }
+
+                if (resolvedOption == null) {
+                    remaining.add(pos)  // not yet resolved, keep
+                    continue
+                }
+
+                // Multi-choice option won
+                val payout = pos.shares * 1.0
+                balanceDelta += payout
+                winningsDelta += payout
+                winDelta++
+                changed = true
+                Log.d("MarketRepository", "Position resolved (multi-choice win): ${pos.optionLabel} → +$payout SP")
+                continue
+            }
+
+            // Event is fully resolved
+            changed = true
+            val won = when {
+                event.eventType == EventType.BINARY -> {
+                    val winningOption = event.options.find { it.id == event.resolvedOptionId }
+                    val winningSide = if (winningOption == event.options.firstOrNull()) TradeSide.YES else TradeSide.NO
+                    pos.side == winningSide
+                }
+                else -> {
+                    // For multi-choice, check if user's option was the winner
+                    val winnerOption = event.options.find { it.id == event.resolvedOptionId }
+                    pos.optionId == winnerOption?.id
+                }
+            }
+
+            if (won) {
+                val payout = pos.shares * 1.0
+                balanceDelta += payout
+                winningsDelta += payout
+                winDelta++
+                Log.d("MarketRepository", "Position won: ${pos.optionLabel} → +$payout SP")
+            } else {
+                Log.d("MarketRepository", "Position lost: ${pos.optionLabel}")
+            }
+            // Either way, remove the resolved position
+        }
+
+        if (changed) {
+            _positions.value = remaining
+            _userProfile.update { profile ->
+                profile.copy(
+                    balance = profile.balance + balanceDelta,
+                    wonBets = profile.wonBets + winDelta,
+                    totalWinnings = profile.totalWinnings + winningsDelta
+                )
+            }
+            persistUserData()
+            Log.d("MarketRepository", "Resolved ${openPositions.size - remaining.size} positions. Balance delta: +$balanceDelta SP")
+        }
     }
 
     fun getCurrentPrice(eventId: String, side: TradeSide): Double {

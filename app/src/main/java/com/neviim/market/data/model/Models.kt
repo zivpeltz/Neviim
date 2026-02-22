@@ -126,6 +126,7 @@ data class PricePoint(
 data class UserPosition(
     val id: String = UUID.randomUUID().toString(),
     val eventId: String,
+    val marketId: String = eventId,   // actual Polymarket market ID for API resolution checks
     val eventTitle: String,
     val eventTitleHe: String,
     val optionId: String = "",

@@ -71,6 +71,7 @@ object UserDataStorage {
             jsonPositions.put(JSONObject().apply {
                 put("id", pos.id)
                 put("eventId", pos.eventId)
+                put("marketId", pos.marketId)
                 put("eventTitle", pos.eventTitle)
                 put("eventTitleHe", pos.eventTitleHe)
                 put("optionId", pos.optionId)
@@ -111,6 +112,8 @@ object UserDataStorage {
                 positions.add(UserPosition(
                     id = jpos.getString("id"),
                     eventId = jpos.getString("eventId"),
+                    // Fall back to eventId for existing saves that pre-date marketId
+                    marketId = jpos.optString("marketId", jpos.getString("eventId")),
                     eventTitle = jpos.getString("eventTitle"),
                     eventTitleHe = jpos.optString("eventTitleHe", ""),
                     optionId = jpos.optString("optionId", ""),
