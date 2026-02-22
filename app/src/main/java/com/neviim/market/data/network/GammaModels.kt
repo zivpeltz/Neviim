@@ -28,7 +28,8 @@ data class GammaMarket(
     // Note: Polymarket API often returns outcomes and outcomePrices as JSON string arrays.
     // e.g. "[\"Yes\", \"No\"]"
     val outcomes: String? = null,
-    val outcomePrices: String? = null
+    val outcomePrices: String? = null,
+    val resolutionSource: String? = null
 ) {
     /** Helper to parse the JSON string array of outcomes. */
     fun parsedOutcomes(): List<String> {
@@ -43,16 +44,14 @@ data class GammaMarket(
     }
 
     private fun parseStringArray(jsonArrayString: String): List<String> {
-        return try {
-            val cleaned = jsonArrayString.trim().removePrefix("[").removeSuffix("]")
-            // Split by comma, but handle quotes inside the array.
-            // A simple naive split might fail if commas are inside strings,
-            // but for Polymarket outcomes, they are simple strings.
-            org.json.JSONArray(jsonArrayString).let { jsonArray ->
-                List(jsonArray.length()) { i -> jsonArray.getString(i) }
-            }
-        } catch (e: Exception) {
-            emptyList()
+        val cleaned = jsonArrayString.trim()
+        if (!cleaned.startsWith("[") || !cleaned.endsWith("]")) return emptyList()
+        val inner = cleaned.substring(1, cleaned.length - 1).trim()
+        if (inner.isEmpty()) return emptyList()
+        
+        // Polymarket arrays are simple: ["Yes", "No"] or ["0.4", "0.6"]
+        return inner.split(",").map { 
+            it.trim().removePrefix("\"").removeSuffix("\"").trim() 
         }
     }
 }

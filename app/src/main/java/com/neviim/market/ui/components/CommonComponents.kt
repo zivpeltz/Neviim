@@ -43,13 +43,13 @@ fun ProbabilityBar(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = "${stringResource(R.string.yes_label)} $yesPercent%",
+                text = "${stringResource(R.string.yes_label)} ${formatPriceAsCents(yesProbability)}",
                 style = MaterialTheme.typography.labelLarge,
                 color = YesColor,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "${stringResource(R.string.no_label)} $noPercent%",
+                text = "${stringResource(R.string.no_label)} ${formatPriceAsCents(1.0 - yesProbability)}",
                 style = MaterialTheme.typography.labelLarge,
                 color = NoColor,
                 fontWeight = FontWeight.Bold
@@ -235,10 +235,26 @@ fun StatCard(
 // ── Format helpers ──────────────────────────────────────────────────
 
 fun formatSP(amount: Double): String {
-    return NumberFormat.getNumberInstance(Locale.US).let {
-        it.maximumFractionDigits = 0
-        "${it.format(amount)} SP"
+    if (amount < 1000) {
+        return NumberFormat.getNumberInstance(Locale.US).let {
+            it.maximumFractionDigits = 0
+            "${it.format(amount)} SP"
+        }
     }
+    
+    val exp = (Math.log10(amount) / 3).toInt()
+    val scaled = amount / Math.pow(10.0, exp * 3.0)
+    val suffix = "KMGTPE"[exp - 1]
+    
+    val formatted = String.format(Locale.US, "%.1f", scaled).removeSuffix(".0")
+    return "$formatted$suffix SP"
+}
+
+fun formatPriceAsCents(value: Double): String {
+    var cents = (value * 100).toInt()
+    if (cents == 0 && value > 0) cents = 1
+    if (cents == 100 && value < 1.0) cents = 99
+    return "${cents}¢"
 }
 
 fun formatPercent(value: Double): String {

@@ -31,8 +31,7 @@ import com.neviim.market.data.model.Event
 import com.neviim.market.data.model.EventOption
 import com.neviim.market.data.model.EventTag
 import com.neviim.market.data.model.EventType
-import com.neviim.market.ui.components.ProbabilityBar
-import com.neviim.market.ui.components.formatPercent
+import com.neviim.market.ui.components.formatPriceAsCents
 import com.neviim.market.ui.components.formatSP
 import com.neviim.market.ui.theme.*
 import com.neviim.market.ui.viewmodel.ExploreViewModel
@@ -250,8 +249,40 @@ private fun EventCard(
 
             // Content depends on event type
             if (event.eventType == EventType.BINARY) {
-                // Probability bar for binary
-                ProbabilityBar(yesProbability = event.yesProbability)
+                // Show Yes/No pricing buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Surface(
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(8.dp),
+                        color = YesColor.copy(alpha = 0.1f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Yes", color = YesColor, fontWeight = FontWeight.SemiBold)
+                            Text(formatPriceAsCents(event.yesProbability), color = YesColor, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Surface(
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(8.dp),
+                        color = NoColor.copy(alpha = 0.1f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("No", color = NoColor, fontWeight = FontWeight.SemiBold)
+                            Text(formatPriceAsCents(event.noProbability), color = NoColor, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
             } else {
                 // Show top options for multi-choice
                 val sortedOptions = event.options.sortedByDescending {
@@ -261,7 +292,7 @@ private fun EventCard(
                     val prob = EventOption.probability(option, event.options)
                     MultiChoiceOptionPreview(
                         label = option.label,
-                        probability = prob
+                        priceCents = formatPriceAsCents(prob)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                 }
@@ -283,18 +314,8 @@ private fun EventCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (event.eventType == EventType.BINARY) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = YesColor.copy(alpha = 0.2f)
-                    ) {
-                        Text(
-                            text = "${stringResource(R.string.yes_label)} ${formatPercent(event.yesProbability)}",
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = YesColor,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    // Empty space or minimal info to balance row
+                    Spacer(modifier = Modifier)
                 } else {
                     // Show leading option as a badge
                     val leader = event.options.maxByOrNull {
@@ -306,7 +327,7 @@ private fun EventCard(
                             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
                         ) {
                             Text(
-                                text = "${leader.label} ${formatPercent(EventOption.probability(leader, event.options))}",
+                                text = "${leader.label} ${formatPriceAsCents(EventOption.probability(leader, event.options))}",
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary,
@@ -358,10 +379,8 @@ private fun EventCard(
 @Composable
 private fun MultiChoiceOptionPreview(
     label: String,
-    probability: Double
+    priceCents: String
 ) {
-    val percent = (probability * 100).toInt()
-
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -377,28 +396,18 @@ private fun MultiChoiceOptionPreview(
         )
         Spacer(modifier = Modifier.width(8.dp))
 
-        // Mini progress bar
-        Box(
-            modifier = Modifier
-                .width(80.dp)
-                .height(6.dp)
-                .clip(RoundedCornerShape(3.dp))
-                .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+        // Price display
+        Surface(
+            shape = RoundedCornerShape(6.dp),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(fraction = probability.toFloat().coerceIn(0.02f, 1f))
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(MaterialTheme.colorScheme.primary)
+            Text(
+                text = priceCents,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
             )
         }
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(
-            text = "$percent%",
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
     }
 }

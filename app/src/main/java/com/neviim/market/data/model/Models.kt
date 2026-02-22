@@ -24,6 +24,7 @@ data class Event(
     val totalVolume: Double = 0.0,
     val isResolved: Boolean = false,
     val resolvedOptionId: String? = null,
+    val resolutionSource: String? = null,
     val priceHistory: List<PricePoint> = emptyList(),
     val createdAt: Long = System.currentTimeMillis(),
     val endDate: Long? = null,

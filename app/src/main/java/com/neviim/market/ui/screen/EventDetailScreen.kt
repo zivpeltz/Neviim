@@ -151,6 +151,21 @@ fun EventDetailScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                    
+                    if (!currentEvent.resolutionSource.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                        ) {
+                            Text(
+                                text = "Resolution Source: ${currentEvent.resolutionSource}",
+                                modifier = Modifier.padding(12.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -581,7 +596,7 @@ private fun OptionPoolRow(
                 else MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
             ) {
                 Text(
-                    text = "$percent%",
+                    text = formatPriceAsCents(probability),
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,

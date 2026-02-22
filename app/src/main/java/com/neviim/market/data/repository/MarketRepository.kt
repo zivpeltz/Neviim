@@ -92,6 +92,7 @@ object MarketRepository {
                                 options = options,
                                 totalVolume = gm.volumeNum,
                                 isResolved = gm.closed,
+                                resolutionSource = gm.resolutionSource,
                                 image = ge.image
                             )
                         )
