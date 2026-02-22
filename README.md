@@ -1,25 +1,27 @@
 <div align="center">
 
-# 🕎 Polymarket Simulator — נביאים
+# 🕎 Neviim — נביאים
 
-**A play-money prediction market simulator pulling live events from Polymarket**
+**A play-money Polymarket simulator for prophets-in-training**
 
 [![Android](https://img.shields.io/badge/Platform-Android-3DDC84?logo=android&logoColor=white)](https://developer.android.com)
 [![Kotlin](https://img.shields.io/badge/Language-Kotlin-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
 [![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](#license)
 
-*Bet fake ShekelPoints on real global events. No real money. Just prophecy.*
+*Bet ShekelPoints on the future. No real money. Just prophecy.*
 
 </div>
 
 ---
 
-## ✨ What is this?
+## ✨ What is Neviim?
 
-This app is a play-money Polymarket Simulator! It pulls real, live data (events, choices, probabilities, and resolution outcomes) directly from the public Polmarket Gamma API. Users are given a fake balance of **ShekelPoints (SP)**, which they can use to place hypothetical bets on these real events. 
+Neviim (Hebrew: **נביאים** — *Prophets*) is a prediction market app where users wager virtual **ShekelPoints (SP)** on outcome events.
 
-A background synchronization worker periodically checks the active bets against the live market state. If an event resolves and your outcome won, the app automatically rewards you with your fake winnings!
+We've evolved into a **play-money Polymarket Simulator**. The app pulls real, live data (events, choices, probabilities, and resolution outcomes) directly from the public Polymarket API.
+
+A background synchronization worker periodically checks your active bets against the live market state. If an event resolves and you predicted correctly, the app automatically rewards you with your simulated winnings!
 
 Think [Polymarket](https://polymarket.com), but with falafel money and zero financial risk.
 
