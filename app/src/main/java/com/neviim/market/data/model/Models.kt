@@ -27,7 +27,8 @@ data class Event(
     val priceHistory: List<PricePoint> = emptyList(),
     val createdAt: Long = System.currentTimeMillis(),
     val endDate: Long? = null,
-    val totalTraders: Int = 0
+    val totalTraders: Int = 0,
+    val image: String? = null
 ) {
     // ── Binary compatibility helpers ────────────────────────────────
     // Kept so existing binary UI code doesn't break.

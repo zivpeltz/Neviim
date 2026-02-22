@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Neviim</string>
+    <string name="app_name">Polymarket Simulator</string>
 
     <!-- Bottom Nav -->
     <string name="nav_explore">Explore</string>
@@ -112,8 +112,8 @@
     <string name="update_error">Error checking</string>
     <string name="update_view_release">View Update</string>
     <string name="settings_section_about">About</string>
-    <string name="settings_about">About Neviim</string>
-    <string name="about_description">Neviim is a play-money prediction market app. Bet ShekelPoints on the future — no real money, just prophecy.</string>
+    <string name="settings_about">About Simulator</string>
+    <string name="about_description">This is a play-money Polymarket Simulator pulling live events and probabilities. Bet dummy points on real global events — no real money involved.</string>
     <string name="about_version">Version</string>
     <string name="about_developer">Developer</string>
     <string name="about_github_url">github.com/zivpeltz/Neviim</string>

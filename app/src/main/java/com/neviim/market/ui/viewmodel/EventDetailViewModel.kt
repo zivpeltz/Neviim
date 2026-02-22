@@ -2,7 +2,6 @@ package com.neviim.market.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.neviim.market.data.amm.AmmEngine
 import com.neviim.market.data.model.Event
 import com.neviim.market.data.model.EventOption
 import com.neviim.market.data.model.EventType
@@ -49,10 +48,10 @@ class EventDetailViewModel : ViewModel() {
         val amount = amtStr.toDoubleOrNull() ?: 0.0
         if (evt != null && amount > 0) {
             when (evt.eventType) {
-                EventType.BINARY -> AmmEngine.estimateReturn(evt, side, amount)
+                EventType.BINARY -> MarketRepository.estimateReturn(evt, side, amount)
                 EventType.MULTI_CHOICE -> {
                     val oid = optionId ?: return@combine 0.0
-                    AmmEngine.estimateOptionReturn(evt, oid, amount)
+                    MarketRepository.estimateOptionReturn(evt, oid, amount)
                 }
             }
         } else 0.0

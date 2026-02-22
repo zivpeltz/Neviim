@@ -29,6 +29,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 import com.neviim.market.R
 import com.neviim.market.data.model.EventOption
 import com.neviim.market.data.model.EventType
@@ -120,6 +122,19 @@ fun EventDetailScreen(
                 Column(
                     modifier = Modifier.padding(16.dp)
                 ) {
+                    if (currentEvent.image != null) {
+                        AsyncImage(
+                            model = currentEvent.image,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
                     Text(
                         text = currentEvent.title,
                         style = MaterialTheme.typography.headlineMedium,
