@@ -15,7 +15,10 @@ interface GammaApi {
         @Query("limit") limit: Int = 100,
         @Query("active") active: Boolean? = null,
         @Query("closed") closed: Boolean? = null,
-        @Query("offset") offset: Int = 0
+        @Query("archived") archived: Boolean? = null,
+        @Query("offset") offset: Int = 0,
+        @Query("order") order: String? = null,
+        @Query("ascending") ascending: Boolean? = null
     ): List<GammaEvent>
 
     @GET("events/{id}")

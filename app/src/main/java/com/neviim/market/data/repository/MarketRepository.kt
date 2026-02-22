@@ -47,62 +47,130 @@ object MarketRepository {
     fun refreshEvents() {
         scope.launch {
             try {
-                val gammaEvents = gammaApi.getEvents(active = true, limit = 50)
+                // FIX: Must pass closed=false and archived=false.
+                // Without these, the API returns only old, closed/archived events
+                // which all get filtered out by our market validation below.
+                // Also sort by 24h volume descending so users see the most active markets first.
+                val gammaEvents = gammaApi.getEvents(
+                    active = true,
+                    closed = false,
+                    archived = false,
+                    limit = 50,
+                    order = "volume24hr",
+                    ascending = false
+                )
                 val mapped = mutableListOf<Event>()
 
                 for (ge in gammaEvents) {
-                    for (gm in ge.markets) {
-                        if (gm.volumeNum < 10) continue // filter out dead markets
+                    // FIX: Filter at both the event and market level.
+                    // A market must be active=true AND closed=false AND have volume.
+                    val validMarkets = ge.markets.filter { gm ->
+                        gm.active && !gm.closed && gm.volumeNum >= 10
+                    }
+                    if (validMarkets.isEmpty()) continue
 
-                        val outcomes = gm.parsedOutcomes()
-                        val prices = gm.parsedOutcomePrices()
-                        if (outcomes.size != prices.size || outcomes.isEmpty()) continue
+                    val tag = when {
+                        ge.tags.any { it.label.equals("Politics", true) } -> EventTag.POLITICS
+                        ge.tags.any { it.label.equals("Crypto", true) } -> EventTag.CRYPTO
+                        ge.tags.any { it.label.equals("Pop Culture", true) } -> EventTag.POP_CULTURE
+                        ge.tags.any { it.label.equals("Science", true) } -> EventTag.SCIENCE
+                        else -> EventTag.SPORTS
+                    }
 
-                        val isBinary = outcomes.size == 2 && outcomes[0].equals("Yes", true)
-                        val type = if (isBinary) EventType.BINARY else EventType.MULTI_CHOICE
+                    // FIX: Group multi-market events into a single MULTI_CHOICE card.
+                    // e.g. "2028 Democratic Primary" has 44 markets (one per candidate).
+                    // We create one event with each market as an option.
+                    if (validMarkets.size > 1) {
+                        // Check if the first market is binary (Yes/No)
+                        val firstOutcomes = validMarkets.first().parsedOutcomes()
+                        val isBinaryGroup = firstOutcomes.size == 2 &&
+                                firstOutcomes[0].equals("Yes", true) &&
+                                firstOutcomes[1].equals("No", true)
 
-                        val tag = when (ge.tags.firstOrNull()?.label?.lowercase()) {
-                            "politics" -> EventTag.POLITICS
-                            "crypto" -> EventTag.CRYPTO
-                            "pop culture" -> EventTag.POP_CULTURE
-                            "science" -> EventTag.SCIENCE
-                            else -> EventTag.SPORTS
-                        }
-
-                        val options = outcomes.zip(prices).mapIndexed { i, (label, price) ->
-                            EventOption(
-                                id = "${gm.id}_$i",
-                                label = label,
-                                labelHe = label,
-                                // Make totalPool around 1000 so the ui logic works.
-                                // price = pool / totalPool => pool = price * ~1000.
-                                // (To be safe against 0, add minimal base pool to all)
-                                pool = (price * 1000.0).coerceAtLeast(1.0)
+                        if (isBinaryGroup) {
+                            // Multiple Yes/No markets under one event = each market is a candidate/option
+                            // e.g. "Will Biden win?" + "Will Trump win?" → options: Biden, Trump
+                            val options = validMarkets.mapIndexed { i, gm ->
+                                val prices = gm.parsedOutcomePrices()
+                                val yesPrice = prices.firstOrNull() ?: 0.5
+                                EventOption(
+                                    id = gm.id,
+                                    label = gm.question.ifBlank { ge.title },
+                                    labelHe = gm.question.ifBlank { ge.title },
+                                    pool = (yesPrice * 1000.0).coerceAtLeast(1.0)
+                                )
+                            }
+                            mapped.add(
+                                Event(
+                                    id = ge.id,
+                                    title = ge.title,
+                                    titleHe = ge.title,
+                                    description = ge.description ?: "",
+                                    tag = tag,
+                                    eventType = EventType.MULTI_CHOICE,
+                                    options = options,
+                                    totalVolume = validMarkets.sumOf { it.volumeNum },
+                                    isResolved = false,
+                                    resolutionSource = validMarkets.first().resolutionSource,
+                                    image = ge.image
+                                )
                             )
+                        } else {
+                            // Mixed or unusual multi-market format — add each as a separate card
+                            for (gm in validMarkets) {
+                                addMarketAsEvent(gm, ge, tag, mapped)
+                            }
                         }
-
-                        mapped.add(
-                            Event(
-                                id = gm.id,
-                                title = gm.question.ifBlank { ge.title },
-                                titleHe = gm.question.ifBlank { ge.title },
-                                description = ge.description ?: "",
-                                tag = tag,
-                                eventType = type,
-                                options = options,
-                                totalVolume = gm.volumeNum,
-                                isResolved = gm.closed,
-                                resolutionSource = gm.resolutionSource,
-                                image = ge.image
-                            )
-                        )
+                    } else {
+                        // Single market: add it as its own card (most likely BINARY)
+                        addMarketAsEvent(validMarkets.first(), ge, tag, mapped)
                     }
                 }
                 _events.value = mapped
+                Log.d("MarketRepository", "Loaded ${mapped.size} events from ${gammaEvents.size} Polymarket events")
             } catch (e: Exception) {
                 Log.e("MarketRepository", "Failed to fetch events", e)
             }
         }
+    }
+
+    private fun addMarketAsEvent(
+        gm: com.neviim.market.data.network.GammaMarket,
+        ge: com.neviim.market.data.network.GammaEvent,
+        tag: EventTag,
+        list: MutableList<Event>
+    ) {
+        val outcomes = gm.parsedOutcomes()
+        val prices = gm.parsedOutcomePrices()
+        if (outcomes.size != prices.size || outcomes.isEmpty()) return
+
+        val isBinary = outcomes.size == 2 && outcomes[0].equals("Yes", true)
+        val type = if (isBinary) EventType.BINARY else EventType.MULTI_CHOICE
+
+        val options = outcomes.zip(prices).mapIndexed { i, (label, price) ->
+            EventOption(
+                id = "${gm.id}_$i",
+                label = label,
+                labelHe = label,
+                pool = (price * 1000.0).coerceAtLeast(1.0)
+            )
+        }
+
+        list.add(
+            Event(
+                id = gm.id,
+                title = gm.question.ifBlank { ge.title },
+                titleHe = gm.question.ifBlank { ge.title },
+                description = ge.description ?: "",
+                tag = tag,
+                eventType = type,
+                options = options,
+                totalVolume = gm.volumeNum,
+                isResolved = gm.closed,
+                resolutionSource = gm.resolutionSource,
+                image = ge.image
+            )
+        )
     }
 
     fun getEvent(eventId: String): Event? = _events.value.find { it.id == eventId }
