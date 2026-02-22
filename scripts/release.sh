@@ -50,6 +50,10 @@ else
     NOTES=$(git log --pretty=format:"- %s" --no-merges -20)
 fi
 
+if [ -f "RELEASE_NOTES.md" ]; then
+    NOTES=$(<RELEASE_NOTES.md)
+fi
+
 if [ -z "$NOTES" ]; then
     NOTES="Release ${TAG}"
 fi
