@@ -3,6 +3,7 @@ package com.neviim.market.data.repository
 import android.content.Context
 import android.util.Log
 import com.neviim.market.data.model.*
+import com.neviim.market.data.network.ClobApi
 import com.neviim.market.data.network.GammaApi
 import com.neviim.market.data.storage.UserDataStorage
 import kotlinx.coroutines.CoroutineScope
@@ -21,6 +22,7 @@ object MarketRepository {
     private lateinit var appContext: Context
     private val scope = CoroutineScope(Dispatchers.IO)
     private val gammaApi by lazy { GammaApi.create() }
+    private val clobApi by lazy { ClobApi.create() }
 
     private val _events = MutableStateFlow<List<Event>>(emptyList())
     val events: StateFlow<List<Event>> = _events.asStateFlow()
@@ -120,8 +122,8 @@ object MarketRepository {
                             // Multiple Yes/No markets under one event = each market is a candidate/option
                             // e.g. "Will Biden win?" + "Will Trump win?" → options: Biden, Trump
                             val options = validMarkets.mapIndexed { i, gm ->
-                                val prices = gm.parsedOutcomePrices()
-                                val yesPrice = prices.firstOrNull() ?: 0.5
+                                // Use bestYesPrice() for accurate real-time price
+                                val yesPrice = gm.bestYesPrice()
                                 EventOption(
                                     id = gm.id,
                                     label = gm.question.ifBlank { ge.title },
@@ -137,7 +139,7 @@ object MarketRepository {
                                     description = ge.description ?: "",
                                     tag = tag,
                                     tagLabel = firstTag,
-                                    conditionId = validMarkets.first().conditionId ?: validMarkets.first().id,
+                                    conditionId = validMarkets.first().firstClobTokenId() ?: validMarkets.first().conditionId ?: validMarkets.first().id,
                                     eventType = EventType.MULTI_CHOICE,
                                     options = options,
                                     totalVolume = validMarkets.sumOf { it.volumeNum },
@@ -183,14 +185,39 @@ object MarketRepository {
         val isBinary = outcomes.size == 2 && outcomes[0].equals("Yes", true)
         val type = if (isBinary) EventType.BINARY else EventType.MULTI_CHOICE
 
-        val options = outcomes.zip(prices).mapIndexed { i, (label, price) ->
-            EventOption(
-                id = "${gm.id}_$i",
-                label = label,
-                labelHe = label,
-                pool = (price * 1000.0).coerceAtLeast(1.0)
+        // For binary markets, use lastTradePrice for the Yes probability (accurate real-time price).
+        // For multi-choice, still use outcomePrices ratios since there's no single lastTradePrice.
+        val options = if (isBinary) {
+            val yesPrice = gm.bestYesPrice()
+            val noPrice = (1.0 - yesPrice).coerceAtLeast(0.001)
+            listOf(
+                EventOption(
+                    id = "${gm.id}_0",
+                    label = outcomes[0],
+                    labelHe = outcomes[0],
+                    pool = (yesPrice * 1000.0).coerceAtLeast(1.0)
+                ),
+                EventOption(
+                    id = "${gm.id}_1",
+                    label = outcomes[1],
+                    labelHe = outcomes[1],
+                    pool = (noPrice * 1000.0).coerceAtLeast(1.0)
+                )
             )
+        } else {
+            outcomes.zip(prices).mapIndexed { i, (label, price) ->
+                EventOption(
+                    id = "${gm.id}_$i",
+                    label = label,
+                    labelHe = label,
+                    pool = (price * 1000.0).coerceAtLeast(1.0)
+                )
+            }
         }
+
+        // Use the first CLOB token ID as conditionId so we can fetch price history.
+        // Falls back to the numeric market ID or conditionId if clobTokenIds is unavailable.
+        val clobId = gm.firstClobTokenId() ?: gm.conditionId ?: gm.id
 
         list.add(
             Event(
@@ -200,7 +227,7 @@ object MarketRepository {
                 description = ge.description ?: "",
                 tag = tag,
                 tagLabel = ge.tags.firstOrNull()?.label ?: "",
-                conditionId = gm.conditionId ?: gm.id,
+                conditionId = clobId,
                 eventType = type,
                 options = options,
                 totalVolume = gm.volumeNum,
@@ -225,12 +252,12 @@ object MarketRepository {
         }
     }
 
-    suspend fun fetchPriceHistory(conditionId: String): List<PricePoint> = try {
-        gammaApi.getPricesHistory(conditionId, interval = "1w", fidelity = 60)
+    suspend fun fetchPriceHistory(clobTokenId: String): List<PricePoint> = try {
+        clobApi.getPricesHistory(clobTokenId, interval = "1w", fidelity = 60)
             .history
             .map { PricePoint(timestamp = it.timestamp * 1000L, yesPrice = it.price) }
     } catch (e: Exception) {
-        Log.w("MarketRepository", "Price history fetch failed for $conditionId", e)
+        Log.w("MarketRepository", "Price history fetch failed for $clobTokenId", e)
         emptyList()
     }
 

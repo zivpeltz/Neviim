@@ -32,7 +32,11 @@ data class GammaMarket(
     // e.g. "[\"Yes\", \"No\"]"
     val outcomes: String? = null,
     val outcomePrices: String? = null,
-    val resolutionSource: String? = null
+    val resolutionSource: String? = null,
+    // Real-time price from CLOB order book (accurate, use instead of outcomePrices for display)
+    val lastTradePrice: Double? = null,
+    // CLOB token IDs: clobTokenIds[0] = Yes token, needed for prices-history API
+    val clobTokenIds: String? = null
 ) {
     /** Helper to parse the JSON string array of outcomes. */
     fun parsedOutcomes(): List<String> {
@@ -44,6 +48,27 @@ data class GammaMarket(
     fun parsedOutcomePrices(): List<Double> {
         val raw = outcomePrices ?: return emptyList()
         return parseStringArray(raw).mapNotNull { it.toDoubleOrNull() }
+    }
+
+    /**
+     * Returns the first CLOB token ID (the "Yes" token).
+     * This is the ID needed for the clob.polymarket.com/prices-history API.
+     */
+    fun firstClobTokenId(): String? {
+        val raw = clobTokenIds ?: return null
+        return parseStringArray(raw).firstOrNull()?.takeIf { it.isNotBlank() }
+    }
+
+    /**
+     * Returns the real-time Yes price.
+     * Prefers lastTradePrice (from CLOB, accurate) over outcomePrices (often stale).
+     * Falls back to outcomePrices[0] only if lastTradePrice is null/zero.
+     */
+    fun bestYesPrice(): Double {
+        val ltp = lastTradePrice
+        if (ltp != null && ltp > 0.0 && ltp < 1.0) return ltp
+        // Fallback: read outcomePrices[0]
+        return parsedOutcomePrices().firstOrNull()?.takeIf { it in 0.001..0.999 } ?: 0.5
     }
 
     private fun parseStringArray(jsonArrayString: String): List<String> {

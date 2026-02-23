@@ -33,19 +33,6 @@ interface GammaApi {
         @Path("id") marketId: String
     ): GammaMarket
 
-    /**
-     * Fetches price history for a market.
-     * @param marketId  the market's conditionId (CLOB id)
-     * @param interval  e.g. "1d", "1w", "1m", "all"
-     * @param fidelity  data point granularity in minutes (60 = hourly)
-     */
-    @GET("prices-history")
-    suspend fun getPricesHistory(
-        @Query("market") marketId: String,
-        @Query("interval") interval: String = "1w",
-        @Query("fidelity") fidelity: Int = 60
-    ): GammaHistoryResponse
-
     companion object {
         private const val BASE_URL = "https://gamma-api.polymarket.com/"
 
@@ -60,6 +47,43 @@ interface GammaApi {
                 .build()
 
             return retrofit.create(GammaApi::class.java)
+        }
+    }
+}
+
+/**
+ * Separate API interface for Polymarket's CLOB (Central Limit Order Book) endpoint.
+ * This is where price history data lives, keyed by the clobTokenId (not conditionId).
+ */
+interface ClobApi {
+
+    /**
+     * Fetches price history for a market.
+     * @param tokenId  the market's clobTokenIds[0] (the "Yes" token ID)
+     * @param interval  e.g. "1d", "1w", "1m", "max"
+     * @param fidelity  data point granularity in minutes (60 = hourly)
+     */
+    @GET("prices-history")
+    suspend fun getPricesHistory(
+        @Query("market") tokenId: String,
+        @Query("interval") interval: String = "1w",
+        @Query("fidelity") fidelity: Int = 60
+    ): GammaHistoryResponse
+
+    companion object {
+        private const val BASE_URL = "https://clob.polymarket.com/"
+
+        fun create(): ClobApi {
+            val moshi = Moshi.Builder()
+                .add(KotlinJsonAdapterFactory())
+                .build()
+
+            val retrofit = Retrofit.Builder()
+                .baseUrl(BASE_URL)
+                .addConverterFactory(MoshiConverterFactory.create(moshi))
+                .build()
+
+            return retrofit.create(ClobApi::class.java)
         }
     }
 }
