@@ -121,14 +121,16 @@ object MarketRepository {
                         if (isBinaryGroup) {
                             // Multiple Yes/No markets under one event = each market is a candidate/option
                             // e.g. "Will Biden win?" + "Will Trump win?" → options: Biden, Trump
-                            val options = validMarkets.mapIndexed { i, gm ->
-                                // Use bestYesPrice() for accurate real-time price
+                            // directPrice = the market's independent Yes probability from Polymarket.
+                            // We do NOT normalize these — they are independent markets, not a pool.
+                            val options = validMarkets.map { gm ->
                                 val yesPrice = gm.bestYesPrice()
                                 EventOption(
                                     id = gm.id,
                                     label = gm.question.ifBlank { ge.title },
                                     labelHe = gm.question.ifBlank { ge.title },
-                                    pool = (yesPrice * 1000.0).coerceAtLeast(1.0)
+                                    pool = (yesPrice * 1000.0).coerceAtLeast(1.0),
+                                    directPrice = yesPrice
                                 )
                             }
                             mapped.add(
@@ -186,7 +188,7 @@ object MarketRepository {
         val type = if (isBinary) EventType.BINARY else EventType.MULTI_CHOICE
 
         // For binary markets, use lastTradePrice for the Yes probability (accurate real-time price).
-        // For multi-choice, still use outcomePrices ratios since there's no single lastTradePrice.
+        // directPrice stores it so probability() returns it directly without pool-ratio distortion.
         val options = if (isBinary) {
             val yesPrice = gm.bestYesPrice()
             val noPrice = (1.0 - yesPrice).coerceAtLeast(0.001)
@@ -195,22 +197,26 @@ object MarketRepository {
                     id = "${gm.id}_0",
                     label = outcomes[0],
                     labelHe = outcomes[0],
-                    pool = (yesPrice * 1000.0).coerceAtLeast(1.0)
+                    pool = (yesPrice * 1000.0).coerceAtLeast(1.0),
+                    directPrice = yesPrice
                 ),
                 EventOption(
                     id = "${gm.id}_1",
                     label = outcomes[1],
                     labelHe = outcomes[1],
-                    pool = (noPrice * 1000.0).coerceAtLeast(1.0)
+                    pool = (noPrice * 1000.0).coerceAtLeast(1.0),
+                    directPrice = noPrice
                 )
             )
         } else {
+            // Non-binary multi-outcome market (rare): use outcomePrices directly
             outcomes.zip(prices).mapIndexed { i, (label, price) ->
                 EventOption(
                     id = "${gm.id}_$i",
                     label = label,
                     labelHe = label,
-                    pool = (price * 1000.0).coerceAtLeast(1.0)
+                    pool = (price * 1000.0).coerceAtLeast(1.0),
+                    directPrice = price.takeIf { it in 0.001..0.999 }
                 )
             }
         }

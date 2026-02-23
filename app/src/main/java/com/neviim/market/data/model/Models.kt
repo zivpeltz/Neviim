@@ -84,21 +84,28 @@ data class EventOption(
     val id: String = UUID.randomUUID().toString(),
     val label: String,
     val labelHe: String = "",
-    val pool: Double = 500.0
-) {
+    val pool: Double = 500.0,
     /**
-     * Calculate this option's probability given the full list of options.
-     * Uses direct pool weighting: P(i) = pool_i / totalPool
-     * For binary, this simplifies to the standard formula.
+     * Direct real-time price from Polymarket (0.0–1.0).
+     * When set, this is used as-is rather than computing pool ratios.
+     * Null for locally-created mock events (which use pool ratios instead).
      */
+    val directPrice: Double? = null
+) {
     companion object {
+        /**
+         * Returns the probability for this option.
+         * - If [option.directPrice] is set → use it directly (Polymarket live price).
+         * - Otherwise → pool-ratio AMM model (used for local/mock events only).
+         */
         fun probability(option: EventOption, allOptions: List<EventOption>): Double {
+            // Prefer direct price when available (Polymarket API data)
+            option.directPrice?.let { return it.coerceIn(0.001, 0.999) }
+
+            // Fallback: pool-ratio (local mock events)
             if (allOptions.size < 2) return 1.0
             val totalPool = allOptions.sumOf { it.pool }
             if (totalPool <= 0) return 1.0 / allOptions.size
-
-            // Direct pool weighting: more SP in the pool = higher probability.
-            // P(i) = pool_i / totalPool
             return option.pool / totalPool
         }
     }
