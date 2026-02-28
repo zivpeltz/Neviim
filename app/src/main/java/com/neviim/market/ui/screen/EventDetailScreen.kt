@@ -11,6 +11,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -42,6 +43,9 @@ import com.neviim.market.ui.components.formatPriceAsCents
 import com.neviim.market.ui.components.formatSP
 import com.neviim.market.ui.theme.*
 import com.neviim.market.ui.viewmodel.EventDetailViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -49,10 +53,18 @@ import kotlin.math.sin
 @Composable
 fun EventDetailScreen(
     eventId: String,
+    initialSide: String? = null,
     onBack: () -> Unit,
     viewModel: EventDetailViewModel = viewModel()
 ) {
-    LaunchedEffect(eventId) { viewModel.loadEvent(eventId) }
+    // Apply the initial trade side exactly once when the screen is first created.
+    LaunchedEffect(eventId, initialSide) {
+        viewModel.loadEvent(eventId)
+        if (initialSide != null) {
+            val side = if (initialSide.equals("NO", ignoreCase = true)) TradeSide.NO else TradeSide.YES
+            viewModel.setInitialSide(side)
+        }
+    }
 
     val event by viewModel.event.collectAsState()
     val selectedSide by viewModel.selectedSide.collectAsState()
@@ -139,6 +151,31 @@ fun EventDetailScreen(
                 }
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(text = currentEvent.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground, lineHeight = 30.sp)
+
+                // ── End date ──────────────────────────────────────────
+                currentEvent.endDate?.let { endMillis ->
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val formatted = remember(endMillis) {
+                        SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(Date(endMillis))
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.CalendarToday,
+                            contentDescription = null,
+                            modifier = Modifier.size(12.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "Ends $formatted",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(20.dp))
 
                 // ── Section 1: Current Odds ────────────────────────
@@ -320,16 +357,21 @@ fun EventDetailScreen(
                         listOf(TradeSide.YES, TradeSide.NO).forEach { side ->
                             val isSel = selectedSide == side
                             val color = if (side == TradeSide.YES) YesColor else NoColor
+                            val prob = if (side == TradeSide.YES) currentEvent.yesProbability else currentEvent.noProbability
+                            val label = if (side == TradeSide.YES) "Buy Yes" else "Buy No"
                             Button(
                                 onClick = { viewModel.selectSide(side) },
-                                modifier = Modifier.weight(1f).height(52.dp),
+                                modifier = Modifier.weight(1f).height(56.dp),
                                 shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = if (isSel) color else color.copy(alpha = 0.12f),
                                     contentColor = if (isSel) Color.White else color
                                 )
                             ) {
-                                Text(if (side == TradeSide.YES) "Buy Yes" else "Buy No", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(label, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                                    Text(formatPriceAsCents(prob), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Normal)
+                                }
                             }
                         }
                     }

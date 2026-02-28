@@ -30,6 +30,9 @@ object MarketRepository {
     private val _positions = MutableStateFlow<List<UserPosition>>(emptyList())
     val positions: StateFlow<List<UserPosition>> = _positions.asStateFlow()
 
+    private val _resolvedPositions = MutableStateFlow<List<UserPosition>>(emptyList())
+    val resolvedPositions: StateFlow<List<UserPosition>> = _resolvedPositions.asStateFlow()
+
     private val _userProfile = MutableStateFlow(UserProfile())
     val userProfile: StateFlow<UserProfile> = _userProfile.asStateFlow()
 
@@ -45,6 +48,7 @@ object MarketRepository {
         if (loaded != null) {
             _userProfile.value = loaded.first
             _positions.value = loaded.second
+            _resolvedPositions.value = loaded.third
         }
         refreshEvents()
         startAutoRefresh()
@@ -62,7 +66,7 @@ object MarketRepository {
 
     private fun persistUserData() {
         if (::appContext.isInitialized) {
-            UserDataStorage.save(appContext, _userProfile.value, _positions.value)
+            UserDataStorage.save(appContext, _userProfile.value, _positions.value, _resolvedPositions.value)
         }
     }
 
@@ -72,6 +76,7 @@ object MarketRepository {
         val loaded = UserDataStorage.load(appContext) ?: return
         _userProfile.value = loaded.first
         _positions.value = loaded.second
+        _resolvedPositions.value = loaded.third
     }
 
     fun refreshEvents() {
@@ -387,6 +392,7 @@ object MarketRepository {
 
         var changed = false
         val remaining = mutableListOf<UserPosition>()
+        val newlyResolved = mutableListOf<UserPosition>()
         var balanceDelta = 0.0
         var winDelta = 0
         var winningsDelta = 0.0
@@ -414,13 +420,14 @@ object MarketRepository {
                 winningsDelta += payout
                 winDelta++
                 changed = true
+                newlyResolved.add(pos.copy(resolvedAt = System.currentTimeMillis(), won = true))
                 Log.d("MarketRepository", "Position resolved (multi-choice win): ${pos.optionLabel} → +$payout SP")
                 continue
             }
 
             // Event is fully resolved
             changed = true
-            val won = when {
+            val didWin = when {
                 event.eventType == EventType.BINARY -> {
                     val winningOption = event.options.find { it.id == event.resolvedOptionId }
                     val winningSide = if (winningOption == event.options.firstOrNull()) TradeSide.YES else TradeSide.NO
@@ -433,7 +440,7 @@ object MarketRepository {
                 }
             }
 
-            if (won) {
+            if (didWin) {
                 val payout = pos.shares * 1.0
                 balanceDelta += payout
                 winningsDelta += payout
@@ -442,11 +449,13 @@ object MarketRepository {
             } else {
                 Log.d("MarketRepository", "Position lost: ${pos.optionLabel}")
             }
-            // Either way, remove the resolved position
+            // Move to resolved history (regardless of win/loss)
+            newlyResolved.add(pos.copy(resolvedAt = System.currentTimeMillis(), won = didWin))
         }
 
         if (changed) {
             _positions.value = remaining
+            _resolvedPositions.update { it + newlyResolved }
             _userProfile.update { profile ->
                 profile.copy(
                     balance = profile.balance + balanceDelta,
@@ -455,7 +464,7 @@ object MarketRepository {
                 )
             }
             persistUserData()
-            Log.d("MarketRepository", "Resolved ${openPositions.size - remaining.size} positions. Balance delta: +$balanceDelta SP")
+            Log.d("MarketRepository", "Resolved ${newlyResolved.size} positions. Balance delta: +$balanceDelta SP")
         }
     }
 
@@ -466,6 +475,17 @@ object MarketRepository {
             TradeSide.NO -> event.noProbability
         }
     }
+
+    /** Returns the current market price for any position, handling both binary and multi-choice. */
+    fun getCurrentPriceForPosition(pos: UserPosition): Double {
+        val event = getEvent(pos.eventId) ?: return pos.entryPrice
+        return if (pos.optionId.isNotBlank()) {
+            getOptionPrice(pos.eventId, pos.optionId)
+        } else {
+            getCurrentPrice(pos.eventId, pos.side)
+        }
+    }
+
 
     fun getOptionPrice(eventId: String, optionId: String): Double {
         val event = getEvent(eventId) ?: return 0.0

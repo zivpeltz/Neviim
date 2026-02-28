@@ -35,7 +35,7 @@ import com.neviim.market.ui.viewmodel.SortMode
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExploreScreen(
-    onEventClick: (String) -> Unit,
+    onEventClick: (eventId: String, side: String?) -> Unit,
     viewModel: ExploreViewModel = viewModel()
 ) {
     val events by viewModel.filteredEvents.collectAsState()
@@ -199,7 +199,11 @@ fun ExploreScreen(
                 verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
                 items(events, key = { it.id }) { event ->
-                    EventFeedCard(event = event, onClick = { onEventClick(event.id) })
+                    EventFeedCard(
+                        event = event,
+                        onClick = { onEventClick(event.id, null) },
+                        onBuyClick = { side -> onEventClick(event.id, side) }
+                    )
                     HorizontalDivider(
                         color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
                         thickness = 1.dp
@@ -212,7 +216,7 @@ fun ExploreScreen(
 }
 
 @Composable
-private fun EventFeedCard(event: Event, onClick: () -> Unit) {
+private fun EventFeedCard(event: Event, onClick: () -> Unit, onBuyClick: (side: String) -> Unit = {}) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -294,8 +298,8 @@ private fun EventFeedCard(event: Event, onClick: () -> Unit) {
                         )
                     }
                 }
-                FeedBuyButton("Yes", formatPriceAsCents(event.yesProbability), YesColor)
-                FeedBuyButton("No", formatPriceAsCents(event.noProbability), NoColor)
+                FeedBuyButton("Yes", formatPriceAsCents(event.yesProbability), YesColor, onClick = { onBuyClick("YES") })
+                FeedBuyButton("No", formatPriceAsCents(event.noProbability), NoColor, onClick = { onBuyClick("NO") })
             }
         } else {
             val sorted = event.options.sortedByDescending { EventOption.probability(it, event.options) }
@@ -324,9 +328,23 @@ private fun EventFeedCard(event: Event, onClick: () -> Unit) {
 }
 
 @Composable
-private fun FeedBuyButton(label: String, price: String, color: androidx.compose.ui.graphics.Color) {
-    Surface(shape = RoundedCornerShape(8.dp), color = color.copy(alpha = 0.1f), modifier = Modifier.width(72.dp)) {
-        Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+private fun FeedBuyButton(
+    label: String,
+    price: String,
+    color: androidx.compose.ui.graphics.Color,
+    onClick: () -> Unit = {}
+) {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = color.copy(alpha = 0.1f),
+        modifier = Modifier
+            .width(72.dp)
+            .clickable(onClick = onClick)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Text(text = label, style = MaterialTheme.typography.labelSmall, color = color, fontWeight = FontWeight.SemiBold)
             Text(text = price, style = MaterialTheme.typography.labelLarge, color = color, fontWeight = FontWeight.ExtraBold)
         }

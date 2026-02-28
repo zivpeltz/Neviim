@@ -98,6 +98,10 @@ class EventDetailViewModel : ViewModel() {
         _selectedSide.value = side
     }
 
+    fun setInitialSide(side: TradeSide) {
+        _selectedSide.value = side
+    }
+
     fun selectOption(optionId: String) {
         _selectedOptionId.value = optionId
     }

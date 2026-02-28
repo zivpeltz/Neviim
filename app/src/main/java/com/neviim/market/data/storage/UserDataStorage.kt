@@ -53,7 +53,12 @@ object UserDataStorage {
 
     // ── Full save / load ─────────────────────────────────────────────
 
-    fun save(context: Context, profile: UserProfile, positions: List<UserPosition>) {
+    fun save(
+        context: Context,
+        profile: UserProfile,
+        positions: List<UserPosition>,
+        resolvedPositions: List<UserPosition> = emptyList()
+    ) {
         val root = JSONObject()
 
         val jsonProfile = JSONObject().apply {
@@ -66,35 +71,44 @@ object UserDataStorage {
         root.put("profile", jsonProfile)
         root.put("hasOnboarded", true)
 
-        val jsonPositions = JSONArray()
-        positions.forEach { pos ->
-            jsonPositions.put(JSONObject().apply {
-                put("id", pos.id)
-                put("eventId", pos.eventId)
-                put("marketId", pos.marketId)
-                put("eventTitle", pos.eventTitle)
-                put("eventTitleHe", pos.eventTitleHe)
-                put("optionId", pos.optionId)
-                put("optionLabel", pos.optionLabel)
-                put("side", pos.side.name)
-                put("shares", pos.shares)
-                put("entryPrice", pos.entryPrice)
-                put("amountPaid", pos.amountPaid)
-                put("timestamp", pos.timestamp)
-            })
+        fun serializePositions(list: List<UserPosition>): JSONArray {
+            val arr = JSONArray()
+            list.forEach { pos ->
+                arr.put(JSONObject().apply {
+                    put("id", pos.id)
+                    put("eventId", pos.eventId)
+                    put("marketId", pos.marketId)
+                    put("eventTitle", pos.eventTitle)
+                    put("eventTitleHe", pos.eventTitleHe)
+                    put("optionId", pos.optionId)
+                    put("optionLabel", pos.optionLabel)
+                    put("side", pos.side.name)
+                    put("shares", pos.shares)
+                    put("entryPrice", pos.entryPrice)
+                    put("amountPaid", pos.amountPaid)
+                    put("timestamp", pos.timestamp)
+                    pos.resolvedAt?.let { put("resolvedAt", it) }
+                    pos.won?.let { put("won", it) }
+                })
+            }
+            return arr
         }
-        root.put("positions", jsonPositions)
+
+        root.put("positions", serializePositions(positions))
+        root.put("resolvedPositions", serializePositions(resolvedPositions))
 
         val file = File(context.filesDir, FILE_NAME)
         file.writeText(root.toString())
     }
 
-    fun load(context: Context): Pair<UserProfile, List<UserPosition>>? {
+    /**
+     * Returns (profile, openPositions, resolvedPositions), or null if no save file exists.
+     */
+    fun load(context: Context): Triple<UserProfile, List<UserPosition>, List<UserPosition>>? {
         val file = File(context.filesDir, FILE_NAME)
         if (!file.exists()) return null
         return try {
-            val text = file.readText()
-            val root = JSONObject(text)
+            val root = JSONObject(file.readText())
 
             val jp = root.getJSONObject("profile")
             val profile = UserProfile(
@@ -105,28 +119,36 @@ object UserDataStorage {
                 wonBets = jp.optInt("wonBets", 0)
             )
 
-            val jarr = root.getJSONArray("positions")
-            val positions = mutableListOf<UserPosition>()
-            for (i in 0 until jarr.length()) {
-                val jpos = jarr.getJSONObject(i)
-                positions.add(UserPosition(
-                    id = jpos.getString("id"),
-                    eventId = jpos.getString("eventId"),
-                    // Fall back to eventId for existing saves that pre-date marketId
-                    marketId = jpos.optString("marketId", jpos.getString("eventId")),
-                    eventTitle = jpos.getString("eventTitle"),
-                    eventTitleHe = jpos.optString("eventTitleHe", ""),
-                    optionId = jpos.optString("optionId", ""),
-                    optionLabel = jpos.optString("optionLabel", ""),
-                    side = TradeSide.valueOf(jpos.getString("side")),
-                    shares = jpos.getDouble("shares"),
-                    entryPrice = jpos.getDouble("entryPrice"),
-                    amountPaid = jpos.getDouble("amountPaid"),
-                    timestamp = jpos.optLong("timestamp", System.currentTimeMillis())
-                ))
+            fun parsePositions(jarr: JSONArray): List<UserPosition> {
+                val list = mutableListOf<UserPosition>()
+                for (i in 0 until jarr.length()) {
+                    val jpos = jarr.getJSONObject(i)
+                    list.add(UserPosition(
+                        id = jpos.getString("id"),
+                        eventId = jpos.getString("eventId"),
+                        marketId = jpos.optString("marketId", jpos.getString("eventId")),
+                        eventTitle = jpos.getString("eventTitle"),
+                        eventTitleHe = jpos.optString("eventTitleHe", ""),
+                        optionId = jpos.optString("optionId", ""),
+                        optionLabel = jpos.optString("optionLabel", ""),
+                        side = TradeSide.valueOf(jpos.getString("side")),
+                        shares = jpos.getDouble("shares"),
+                        entryPrice = jpos.getDouble("entryPrice"),
+                        amountPaid = jpos.getDouble("amountPaid"),
+                        timestamp = jpos.optLong("timestamp", System.currentTimeMillis()),
+                        resolvedAt = jpos.optLong("resolvedAt", 0L).takeIf { it > 0 },
+                        won = if (jpos.has("won")) jpos.optBoolean("won") else null
+                    ))
+                }
+                return list
             }
 
-            Pair(profile, positions)
+            val openPositions = parsePositions(root.getJSONArray("positions"))
+            val resolvedPositions = if (root.has("resolvedPositions"))
+                parsePositions(root.getJSONArray("resolvedPositions"))
+            else emptyList()
+
+            Triple(profile, openPositions, resolvedPositions)
         } catch (e: Exception) {
             null
         }

@@ -142,7 +142,9 @@ data class UserPosition(
     val shares: Double,
     val entryPrice: Double,
     val amountPaid: Double,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val resolvedAt: Long? = null,     // set when the position is settled
+    val won: Boolean? = null          // null = open, true = won, false = lost
 )
 
 enum class TradeSide { YES, NO }

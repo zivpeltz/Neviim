@@ -65,15 +65,17 @@ The simulator fully supports **English (LTR)** and **Hebrew (RTL)**:
 ## 🎯 Features
 
 ### Core
-- **Explore** — Scrollable feed of active live markets fetched from Polymarket.
-- **Event Detail** — Rich info (description, tags, volume, pools, end date) and trade panel.
-- **My Bids** — Active & resolved positions with entry price, shares, and amount paid.
-- **My Account** — Balance, win rate, total bets, and a +1,000 SP refill button.
+- **Explore** — Scrollable feed of active live markets fetched from Polymarket. Deep-links directly to markets.
+- **Dynamic Tagging** — Uses live tags (trending, new, domains) straight from the blockchain.
+- **Event Detail** — Rich UI with accurate outcome probabilities, "Ends At" countdowns, full event rules, and volume indicators. Beautiful multi-choice dropdowns and intuitive binary trade panels.
+- **My Bids (Portfolio)** — View real-time value changes, un-realized percent gains/losses, and completely split history between Active and Resolved trades.
+- **My Account** — Profile dashboard exhibiting your aggregate win rate, gross winnings, total trades, and a quick "Ask for a Miracle" +1,000 SP refill button.
 
 ### Simulated Trading
-- Prices accurately reflect real-world Polymarket probabilities at the time of the bet.
-- Fully local storage ensures your position data stays private.
-- WorkManager routinely syncs with the Gamma API to close out resolved bets and credit your account.
+- Zero financial risk play-money environment. Trade freely utilizing *ShekelPoints (SP)*.
+- Price histories mimic Polymarket probabilies, storing trade states independently on your device.
+- Robust in-app background event resolution logic securely queries Polymarket gamma APIs and settles your open trades instantly as events resolve in the real world.
+- Supports both simple binary ("Will X happen by Y?") and complex multi-choice ("Who will win the election?") events.
 
 ---
 

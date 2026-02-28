@@ -29,12 +29,15 @@ import com.neviim.market.ui.screen.*
 object Routes {
     const val ONBOARDING = "onboarding"
     const val EXPLORE = "explore"
-    const val EVENT_DETAIL = "event_detail/{eventId}"
+    const val EVENT_DETAIL = "event_detail/{eventId}?side={side}"
     const val PORTFOLIO = "portfolio"
     const val ACCOUNT = "account"
     const val SETTINGS = "settings"
 
-    fun eventDetail(eventId: String) = "event_detail/$eventId"
+    fun eventDetail(eventId: String, side: String? = null): String {
+        val base = "event_detail/$eventId"
+        return if (side != null) "$base?side=$side" else base
+    }
 }
 
 data class BottomNavItem(
@@ -143,8 +146,8 @@ fun NeviimNavHost() {
 
             composable(Routes.EXPLORE) {
                 ExploreScreen(
-                    onEventClick = { eventId ->
-                        navController.navigate(Routes.eventDetail(eventId))
+                    onEventClick = { eventId, side ->
+                        navController.navigate(Routes.eventDetail(eventId, side))
                     }
                 )
             }
@@ -152,12 +155,15 @@ fun NeviimNavHost() {
             composable(
                 Routes.EVENT_DETAIL,
                 arguments = listOf(
-                    navArgument("eventId") { type = NavType.StringType }
+                    navArgument("eventId") { type = NavType.StringType },
+                    navArgument("side") { type = NavType.StringType; defaultValue = "" }
                 )
             ) { backStackEntry ->
                 val eventId = backStackEntry.arguments?.getString("eventId") ?: return@composable
+                val side = backStackEntry.arguments?.getString("side")?.takeIf { it.isNotEmpty() }
                 EventDetailScreen(
                     eventId = eventId,
+                    initialSide = side,
                     onBack = { navController.popBackStack() }
                 )
             }

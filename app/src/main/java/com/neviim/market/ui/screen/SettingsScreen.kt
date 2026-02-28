@@ -376,16 +376,16 @@ fun SettingsScreen(
                             )
                             Button(
                                 onClick = {
-                                    val amount = devRefillInput.toDoubleOrNull()
+                                    val amount = devRefillInput.toIntOrNull()
                                     if (amount != null && amount > 0) {
-                                        viewModel.refillBalance(amount)
+                                        viewModel.refillBalance(amount.toDouble())
                                         devRefillInput = ""
                                         showDevRefill = false
                                     }
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp),
-                                enabled = (devRefillInput.toDoubleOrNull() ?: 0.0) > 0
+                                enabled = (devRefillInput.toIntOrNull() ?: 0) > 0
                             ) {
                                 Text("Add SP", fontWeight = FontWeight.Bold)
                             }

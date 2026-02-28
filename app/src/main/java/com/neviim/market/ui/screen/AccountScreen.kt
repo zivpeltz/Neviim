@@ -30,7 +30,6 @@ import com.neviim.market.ui.components.formatPercent
 import com.neviim.market.ui.components.formatSP
 import com.neviim.market.ui.theme.*
 import com.neviim.market.ui.viewmodel.AccountViewModel
-import com.neviim.market.ui.viewmodel.PortfolioViewModel
 import com.neviim.market.ui.viewmodel.PositionWithPnL
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -40,22 +39,15 @@ import java.util.Locale
 @Composable
 fun AccountScreen(
     onSettingsClick: () -> Unit = {},
-    viewModel: AccountViewModel = viewModel(),
-    portfolioViewModel: PortfolioViewModel = viewModel()
+    viewModel: AccountViewModel = viewModel()
 ) {
     val profile by viewModel.userProfile.collectAsState()
-    val activePositions by portfolioViewModel.activePositions.collectAsState()
-    val resolvedPositions by portfolioViewModel.resolvedPositions.collectAsState()
+    val activePositions by viewModel.activePositions.collectAsState()
+    val resolvedPositions by viewModel.resolvedPositions.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
 
-    // Derived stats
-    val totalInvested = (activePositions + resolvedPositions).sumOf { it.position.amountPaid }
-    val totalVolume = totalInvested  // same concept here
-    val totalCurrentValue = activePositions.sumOf { it.position.shares * it.currentPrice } +
-            resolvedPositions.sumOf { it.pnl + it.position.amountPaid }
-    val overallPnL = activePositions.sumOf { it.pnl } + profile.totalWinnings -
-            resolvedPositions.sumOf { it.position.amountPaid }
-    val pnlPositive = overallPnL >= 0
+    // Derived stats — use profile values which are authoritative
+    val pnlPositive = profile.totalWinnings >= 0
 
     // Initials avatar
     val initials = profile.username.trim().split(" ")
@@ -374,9 +366,10 @@ private fun TradeHistoryCard(
         else -> NoColor
     }
 
-    // Date
-    val dateStr = remember(pos.timestamp) {
-        SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(Date(pos.timestamp))
+    // Date — prefer resolvedAt for settled positions
+    val displayTime = if (isResolved) (pos.resolvedAt ?: pos.timestamp) else pos.timestamp
+    val dateStr = remember(displayTime) {
+        SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(Date(displayTime))
     }
 
     Card(
